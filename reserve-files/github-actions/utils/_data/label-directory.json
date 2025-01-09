@@ -629,7 +629,7 @@
   ],
   "roleMissing": [
     "role missing",
-    9999999999
+    7781839026
   ],
   "roleOrgRep": [
     "role: Org Rep",
@@ -787,14 +787,6 @@
     "wontfix",
     905516652
   ],
-  "NEW-labelForTestingOnly": [
-    "Label for TESTING only!!!",
-    9999999999
-  ],
-  "NEW-labelForTestingPart2": [
-    "Label for TESTING part 2",
-    9999999999
-  ],
   "NEW-featureRoadmap": [
     "feature: Roadmap",
     7472857782
@@ -819,20 +811,12 @@
     "milestone: missing",
     7695414022
   ],
-  "NEW-frontEnd": [
-    "front end",
-    9999999999
-  ],
-  "NEW-roleFrontEndBackEnd": [
-    "role: front-end/back-end",
-    9999999999
-  ],
-  "NEW-roleMissing": [
-    "role missing",
-    7781839026
-  ],
   "NEW-featureFaq": [
     "feature: FAQ",
     7970290985
-  ]
+  ],
+  "NEW-skillsTemplateStatusNeedNextSteps": [ 
+    "Skills Template status: Need Next Steps", 
+    7582275087
+  ], 
 }
