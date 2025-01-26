@@ -822,5 +822,9 @@
   "NEW-2WeeksInactive": [
     "2 weeks inactive",
     8048259525
+  ],
+  "NEW-roleDataScientist": [
+    "role: data scientist",
+    8056944058
   ]
 }
