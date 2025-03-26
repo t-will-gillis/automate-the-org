@@ -92,6 +92,13 @@ leadership:
       slack: https://hackforla.slack.com/team/U07GAGE89TJ
       github: https://github.com/hussainmudassir
     picture: https://avatars.githubusercontent.com/hussainmudassir
+  - name: Angela Lee
+    github-handle: angela-lee1
+    role: Developer
+    links:
+      slack: https://hackforla.slack.com/team/U062NB2CKMZ
+      github: https://github.com/angela-lee1/
+    picture: https://avatars.githubusercontent.com/angela-lee1
 links:
   - name: GitHub
     url: 'https://github.com/hackforla/VRMS'
