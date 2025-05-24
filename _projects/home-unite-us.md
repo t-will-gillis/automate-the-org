@@ -43,7 +43,7 @@ leadership:
     picture: https://avatars.githubusercontent.com/nlvan
   - name: Tyler Thome
     github-handle: 
-    role: HUU Tech Lead
+    role: Lead Developer
     links:
       slack: "https://hackforla.slack.com/team/ULN1M6UAH"
       github: "https://github.com/tylerthome"
