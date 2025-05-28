@@ -62,6 +62,13 @@ leadership:
       slack: https://hackforla.slack.com/team/U06E9RQ8DRA
       github: https://github.com/sylvia-nam
     picture: https://avatars.githubusercontent.com/sylvia-nam
+  - name: Melissa Ligertwood
+    github-handle: TechWriterMelissa 
+    role: UX Content, Team Co-lead
+    links:
+      slack: https://hackforla.slack.com/team/U07QWJTHWBE
+      github: https://github.com/TechWriterMelissa 
+    picture: https://avatars.githubusercontent.com/TechWriterMelissa 
   - name: Giselle Dizon
     github-handle: giselledizon
     role: UX Content, Team Co-lead
