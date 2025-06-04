@@ -78,7 +78,7 @@ leadership:
     picture: https://avatars.githubusercontent.com/giselledizon
   - name: Rachel Ichniowski
     github-handle: raeraeicky
-    role: Product Manager, UX Research
+    role: Product Manager, UX Research and Content
     links:
       slack: https://hackforla.slack.com/team/U07LGA7RZ0W
       github: https://github.com/raeraeicky
