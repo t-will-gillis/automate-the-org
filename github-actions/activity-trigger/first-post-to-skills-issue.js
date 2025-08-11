@@ -30,7 +30,7 @@ async function firstPostToSkillsIssue({g, c}) {
 
 
     try {
-        const csvPath = 'github-actions/activity-trigger/member_activity_history_bot_6.csv';
+        const csvPath = 'github-actions/activity-trigger/member_activity_history_bot_9.csv';
 
         const csvContent = fs.readFileSync(csvPath, 'utf-8');
 
@@ -72,11 +72,13 @@ async function firstPostToSkillsIssue({g, c}) {
                     issueNum: skillsIssueNum,
                     state: "open",
                 });
+
+                // disable to avoid rate limits
                 // update issue's status to "In progress (actively working)"
                 // Needs skillsIssueNodeId first.
-                let skillsIssueNodeId = await retrieveSkillsId(github, context, skillsIssueNum);
-                let statusValue = statusFieldIds('In_Progress');
-                await mutateIssueStatus(github, context, skillsIssueNodeId, statusValue);
+                // let skillsIssueNodeId = await retrieveSkillsId(github, context, skillsIssueNum);
+                // let statusValue = statusFieldIds('In_Progress');
+                // await mutateIssueStatus(github, context, skillsIssueNodeId, statusValue);
             }
         });
 
