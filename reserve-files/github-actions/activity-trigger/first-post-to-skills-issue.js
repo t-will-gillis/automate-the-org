@@ -30,7 +30,7 @@ async function firstPostToSkillsIssue({g, c}) {
 
 
     try {
-        const csvPath = 'github-actions/activity-trigger/member_activity_history_bot_8.csv';
+        const csvPath = 'github-actions/activity-trigger/member_activity_history_bot_7.csv';
 
         const csvContent = fs.readFileSync(csvPath, 'utf-8');
 
