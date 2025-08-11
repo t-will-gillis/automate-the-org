@@ -54,11 +54,12 @@ async function firstPostToSkillsIssue({g, c}) {
             const body = `${MARKER}\n## Activity Log: ${username}\n\n#####  ⚠ Important note: The bot updates this issue automatically - do not edit\n\n${message}`;
             await postComment(skillsIssueNum, body, github, context);
 
+            // Do not cleanup comments- killing us with rate limits
             // Perform cleanup of comments
-            const commentIds = await getIssueComments(github, context, skillsIssueNum);
-            for (const commentId of commentIds) {
-                await minimizeIssueComment(github, commentId);
-            }
+            // const commentIds = await getIssueComments(github, context, skillsIssueNum);   
+            // for (const commentId of commentIds) {
+            //     await minimizeIssueComment(github, commentId);
+            // }
             
             // Check whether eventActor is team member; if so open issue and move to "In progress"
             const isActiveMember = await checkTeamMembership(github, username, team);
