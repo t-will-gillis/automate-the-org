@@ -82,13 +82,6 @@ leadership:
       slack: https://hackforla.slack.com/team/U059K7A1VFB
       github: https://github.com/LRenDO
     picture: https://avatars.githubusercontent.com/LRenDO
-  - name: Siyun Feng
-    github-handle: siyunfeng
-    role: Merge Team
-    links:
-      slack: https://hackforla.slack.com/team/U07QWL2A5BN
-      github: https://github.com/siyunfeng
-    picture: https://avatars.githubusercontent.com/siyunfeng
   - name: Mugdh Chauhan
     github-handle: mugdhchauhan
     role: Merge Team
