@@ -8,35 +8,47 @@
 async function activityTrigger({github, context}) {
 
     let issueNum = '';
-    let assignee = '';
     let timeline = '';
+    let eventUrl = '';
 
     let eventName = context.eventName;
     let eventAction = context.payload.action;
     let eventActor = context.actor;
+
+    let eventObserver = '';
     let eventPRAuthor = '';
     let activities = [];
 
     // Exclude all bot actors from being recorded as a guardrail against infinite loops
-    const EXCLUDED_ACTORS = ['HackforLABot', 'elizabethhonest', 'github-actions', 'github-advanced-security', 'github-pages', 'dependabot[bot]', 'dependabot-preview[bot]', 'dependabot', 'dependabot-preview'];
+    const EXCLUDED_ACTORS = [
+        "HackforLABot",
+        "elizabethhonest",
+        "dependabot",
+        "dependabot[bot]",
+        "github-actions",
+        "github-actions[bot]",
+        "github-advanced-security",
+        "github-advanced-security[bot]"
+    ];
 
     if (eventName === 'issues') {
         issueNum = context.payload.issue.number;
         eventUrl = context.payload.issue.html_url;
         timeline = context.payload.issue.updated_at;
-        // If issue action is not opened and an assignee exists, then change
-        // the eventActor to the issue assignee, else retain issue author
-        assignee = context.payload.assignee?.login;
-        if (eventAction != 'opened' && assignee != null ) {
-            console.log(`Issue is ${eventAction}. Change eventActor => ${assignee}`);
-            eventActor = assignee;
-        } else {
-            eventActor = context.payload.issue.user.login;
-        }
+        // eventActor is the actor that directly causes or performs the eventAction
+        // eventObserver is the actor whose issue is being acted upon
         if (eventAction === 'closed') {
+            // eventObserver is the assignee if exists, else is the issueAuthor
+            if (context.payload.issue.assignees?.length > 0) {
+                eventObserver = context.payload.issue.assignees[0].login; // aka assignee (first)
+            } else {
+                eventObserver = context.payload.issue.user.login;         // aka issueAuthor
+            }
             let reason = context.payload.issue.state_reason;
-            eventActor = context.payload.issue.user.login;
             eventAction = 'Closed-' + reason;
+        // eventActor is the assignee when eventAction is assigned/unassigned (not context.actor) 
+        } else if (eventAction === 'assigned' || eventAction === 'unassigned') {
+            eventActor = context.payload.assignee.login;
         }
     } else if (eventName === 'issue_comment') {
         // Check if the comment is on an issue or a pull request
@@ -61,14 +73,21 @@ async function activityTrigger({github, context}) {
         issueNum = context.payload.pull_request.number;
         eventUrl = context.payload.review.html_url;
         timeline = context.payload.review.updated_at;
+        eventActor = context.payload.review.user.login;
+    } else if (eventName === 'pull_request_review_comment') {
+        issueNum = context.payload.pull_request.number;
+        eventUrl = context.payload.comment.html_url;
+        timeline = context.payload.comment.updated_at;
     }
 
     // Return immediately if the issueNum is a Skills Issue- to discourage
     // infinite loop (recording comment, recording the recording of comment, etc.)
-    const isSkillsIssue = await checkIfSkillsIssue(issueNum);
-    if (isSkillsIssue) {
-        console.log(`- issueNum: ${issueNum} identified as Skills Issue`);
-        // return activities; <-- confirm before uncommenting
+    if (eventName === 'issues' || eventName === 'issue_comment') {
+        const isSkillsIssue = await checkIfSkillsIssue(issueNum);
+        if (isSkillsIssue) {
+            console.log(`- issueNum: ${issueNum} identified as Skills Issue`);
+            // return activities; <-- do not uncomment yet; continue to capture logs
+        }
     }
 
     // Message templates to post on Skills Issue
@@ -81,40 +100,32 @@ async function activityTrigger({github, context}) {
         'issues.assigned': 'assigned',
         'issues.unassigned': 'unassigned',
         'issue_comment.created': 'commented',
-        'pull_request_review.created': 'submitted review',
+        'pull_request_review.submitted': 'submitted review',
+        'pull_request_review_comment.created': 'commented',
         'pull_request_comment.created': 'commented',
-        'pull_request.opened': 'opened',
-        'pull_request.PRclosed': 'closed',
-        'pull_request.PRmerged': 'merged',
-        'pull_request.reopened': 'reopened'
+        'pull_request_target.opened': 'opened',
+        'pull_request_target.PRclosed': 'closed',
+        'pull_request_target.PRmerged': 'merged',
+        'pull_request_target.reopened': 'reopened'
     };
     
     let localTime = getDateTime(timeline);
     let action = actionMap[`${eventName}.${eventAction}`];
-    let message = `- ${eventActor} ${action}: ${eventUrl} at ${localTime}`;
 
     // Check to confirm the eventActor isn't a bot
-    const isExcluded = (eventActor) => EXCLUDED_ACTORS.includes(eventActor);
-    if (!isExcluded(eventActor)) {
-        console.log(`Not a bot. Message to post:  ${message}`);
-        activities.push([eventActor, message]);
-    }
-
-    // Only if issue is closed, and eventActor != assignee, return assignee and message
-    if (eventAction.includes('Closed-') && (eventActor !== assignee)) {
-        message = `- ${assignee} issue ${action}: ${eventUrl} at ${localTime}`;
-        activities.push([assignee, message]);
+    if (!checkIfBot(eventActor)) {
+        composeAndPushMessage(eventActor, action, eventUrl, localTime);
+    } 
+    // Only if issue is closed, eventObserver !== eventActor, and eventObserver not a bot
+    if (eventAction.includes('Closed-') && (eventActor !== eventObserver) && (!checkIfBot(eventObserver))) {
+        composeAndPushMessage(eventObserver, `issue was ${action}`, eventUrl, localTime);
     }
     // Only if PRclosed or PRmerged, and PRAuthor != eventActor, return PRAuthor and message
-    if ((eventAction === 'PRclosed' || eventAction === 'PRmerged') && (eventActor != eventPRAuthor)) {
-        let messagePRAuthor = `- ${eventPRAuthor} PR was ${action}: ${eventUrl} at ${localTime}`;
-        if (!isExcluded(eventPRAuthor)) {
-            console.log(`Not a bot. Message to post:  ${messagePRAuthor}`);
-            activities.push([eventPRAuthor, messagePRAuthor]);
-        }
+    if (eventAction.includes('PR') && (eventActor != eventPRAuthor) && (!checkIfBot(eventPRAuthor))) {
+        composeAndPushMessage(eventPRAuthor, `PR was ${action}`, eventUrl, localTime);
     }
 
-    return JSON.stringify(activities);
+    return activities;
 
 
 
@@ -145,6 +156,30 @@ async function activityTrigger({github, context}) {
         const date = new Date(timeline);
         const options = { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true, timeZoneName: 'short' };
         return date.toLocaleString('en-US', options);
+    }
+
+    /**
+     * Helper function to check if eventActor is a bot
+     * @param {String} eventActor   - the eventActor to check
+     * @returns {Boolean}           - true if bot, false if not
+     */
+    function checkIfBot(eventActor) {
+        let isBot = EXCLUDED_ACTORS.includes(eventActor);
+        if (isBot) console.log(`eventActor: ${eventActor} likely a bot. Do not post`); 
+        return isBot;
+    }
+
+    /**
+     * Helper function to create message and push to activities array
+     * @param {String} actor    - the eventActor
+     * @param {String} action   - the action performed by the eventActor
+     * @param {String} url      - the URL of the issue or PR
+     * @param {String} time     - the date and time of the event
+     */
+    function composeAndPushMessage(actor, action, url, time) {
+        let message =  `- ${actor} ${action}: ${url} at ${time}`;
+        console.log(`Message to post:  "${message}"`);
+        activities.push([actor, message]);
     }
 
 }
