@@ -18,7 +18,7 @@ async function addTeamMember(github, context, teamSlug, username) {
     isMember = true;
     console.log(`Member ${username} already on ${teamSlug} team`);
   } catch (error) {
-    // If response status is not 200, need to add member to baseTeam
+    // If response status is not 404, need to add member to baseTeam
     if (error.status != 404) throw error;
   }
 

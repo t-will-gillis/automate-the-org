@@ -1,6 +1,6 @@
 /**
  * Function to return list of current team members
- * @param {Object} github      - github object from actions/github-script
+ * @param {Object} github      - GitHub object from actions/github-script
  * @param {Object} context     - context object from actions/github-script
  * @param {String} team        - team from which to get member list
  * @returns {Array} allMembers - Current team members
