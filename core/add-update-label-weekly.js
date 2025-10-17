@@ -1,10 +1,8 @@
 // Import modules
-const fs = require('fs');
-const retrieveLabelDirectory = require('../../utils/retrieve-label-directory');
-const queryIssueInfo = require('../../utils/query-issue-info');
-const findLinkedIssue = require('../../utils/find-linked-issue');
-const getTimeline = require('../../utils/get-timeline');
-const minimizeIssueComment = require('../../utils/hide-issue-comment');
+const queryIssueInfo = require('../shared/query-issue-info');
+const findLinkedIssue = require('../shared/find-linked-issue');
+const getIssueTimeline = require('../shared/get-issue-timeline');
+const minimizeIssueComment = require('../shared/hide-issue-comment');
 
 // Global variables
 var github;
@@ -66,7 +64,7 @@ async function main({ g, c }) {
   const issueNums = await getIssueNumsFromRepo();
 
   for await (let issueNum of issueNums) {
-    const timeline = await getTimeline(issueNum, github, context);
+    const timeline = await getIssueTimeline(github, context, timeline);
     const assignees = await getAssignees(issueNum);
     // Error catching 
     if (assignees.length === 0) {
