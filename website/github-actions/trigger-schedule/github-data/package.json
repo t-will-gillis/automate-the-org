@@ -1,0 +1,25 @@
+{
+  "name": "Website",
+  "version": "3.0.0",
+  "description": "> Hack for LA's website https://www.hackforla.org",
+  "exports": "./github-actions/get-project-data.js",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.0",
+    "@actions/http-client": ">=2.2.1",
+    "@octokit/rest": "^22.0.0",
+    "lodash": "^4.17.21",
+    "true-github-contributors": "^1.0.5"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Kian Badie",
+  "license": "ISC"
+}
