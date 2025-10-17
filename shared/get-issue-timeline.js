@@ -38,4 +38,4 @@ async function getIssueTimeline(github, context, issueNum) {
   return timelineArray;
 }
 
-module.exports = getIssueTimeline;
+export default getIssueTimeline;

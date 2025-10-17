@@ -9,4 +9,4 @@
   return labels;
 }
 
-module.exports = obtainLabels;
+export default obtainLabels;

@@ -60,4 +60,4 @@ async function queryIssueInfo(github, context, issueNum) {
   }
 }
 
-module.exports = queryIssueInfo;
+export default queryIssueInfo;

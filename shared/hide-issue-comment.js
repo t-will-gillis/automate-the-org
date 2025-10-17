@@ -26,4 +26,4 @@ async function minimizeIssueComment(github, nodeId) {
   }
 }
 
-module.exports = minimizeIssueComment;
+export default minimizeIssueComment;

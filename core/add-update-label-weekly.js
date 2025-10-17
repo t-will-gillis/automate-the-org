@@ -1,8 +1,8 @@
 // Import modules
-const queryIssueInfo = require('../shared/query-issue-info');
-const findLinkedIssue = require('../shared/find-linked-issue');
-const getIssueTimeline = require('../shared/get-issue-timeline');
-const minimizeIssueComment = require('../shared/hide-issue-comment');
+const queryIssueInfo = require('../shared/query-issue-info').default;
+const findLinkedIssue = require('../shared/find-linked-issue').default;
+const getIssueTimeline = require('../shared/get-issue-timeline').default;
+const minimizeIssueComment = require('../shared/hide-issue-comment').default;
 
 // Global variables
 var github;

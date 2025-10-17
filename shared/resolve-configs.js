@@ -1,6 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const yaml = require('js-yaml');
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
+import { load, YAMLException } from 'js-yaml';
 
 /**
  * Resolves configuration settings by merging defaults, project configs, and overrides
@@ -8,7 +8,7 @@ const yaml = require('js-yaml');
  * @param {string} options.projectRepoPath       - Path to the project repository
  * @param {string} options.configPath            - Relative path to config file
  * @param {Object} options.defaults              - Default configuration values
- * @param {Object} options.overrides             - Runtime overrides (from action inputs)
+ * @param {Object} options.overrides             - Runtime overrides (from action.yml inputs)
  * @param {Array<string>} options.requiredFields - Required fields in dot-notation
  * @returns {Object}                             - Merged and validated configuration
  */
@@ -21,17 +21,17 @@ function resolveConfig({
 }) {
 
   // Construct full path to config file
-  const fullConfigPath = path.join(projectRepoPath, configPath);
+  const fullConfigPath = join(projectRepoPath, configPath);
 
   let projectConfig = {};
   // Load project configuration if file exists
-  if (fs.existsSync(fullConfigPath)) {
+  if (existsSync(fullConfigPath)) {
     try {
-      const fileContents = fs.readFileSync(fullConfigPath, 'utf8');
-      projectConfig = yaml.load(fileContents) || {};
-      console.log(`✅ Loaded configuration from ${configPath}`);
+      const fileContents = readFileSync(fullConfigPath, 'utf8');
+      projectConfig = load(fileContents) || {};
+      console.log(`✅ Loaded config file from ${configPath}`);
     } catch (error) {
-      if (error instanceof yaml.YAMLException) {
+      if (error instanceof YAMLException) {
         throw new Error(`❌ Failed to read or parse config file at ${configPath}: ${error.message}`);
       }
       throw error;
@@ -115,4 +115,4 @@ function validateRequiredFields(config, requiredFields) {
   console.log(`✅ Resolved required configuration fields`);
 }
 
-module.exports = { resolveConfig, deepMerge, validateRequiredFields };
+export default { resolveConfig, deepMerge, validateRequiredFields };

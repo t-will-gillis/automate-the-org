@@ -1,6 +1,6 @@
-const fs = require('fs').promises;
-const path = require('path');
-const yaml = require('js-yaml');
+import { promises as fs } from 'fs';
+import { join } from 'path';
+import { load, YAMLException } from 'js-yaml';
 
 /**
  * Resolves label keys to actual label names from a project's label directory
@@ -19,7 +19,7 @@ async function resolveLabels({
 }) {
   
   // Construct full path to label directory YAML file
-  const fullLabelPath = path.join(projectRepoPath, labelDirectoryPath);
+  const fullLabelPath = join(projectRepoPath, labelDirectoryPath);
 
   // Check if label directory YAML file exists
   try {
@@ -36,13 +36,13 @@ async function resolveLabels({
   let labelDirectory = {};
   try {
     const rawData = await fs.readFile(fullLabelPath, 'utf8');
-    labelDirectory = yaml.load(rawData);
+    labelDirectory = load(rawData);
 
     if (!labelDirectory || typeof labelDirectory !== 'object') {
       throw new Error('❌ Label directory YAML file is empty or invalid');
     }
   } catch (error) {
-    if (error instanceof yaml.YAMLException) {
+    if (error instanceof YAMLException) {
       throw new Error(
         `❌ Failed to retrieve label directory YAML file at ${labelDirectoryPath}: ${error.message}`
       );
@@ -79,4 +79,4 @@ async function resolveLabels({
   return resolvedLabels;
 }
 
-module.exports = { resolveLabels };
+export default { resolveLabels };

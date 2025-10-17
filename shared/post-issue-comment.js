@@ -22,4 +22,4 @@ async function postIssueComment(github, context, issueNum, comment) {
   }
 }
 
-module.exports = postIssueComment;
+export default postIssueComment;

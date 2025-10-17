@@ -1,0 +1,30 @@
+name: Add Update Label Weekly
+
+on:
+  schedule:
+    - cron: '0 7 * 1-6,8-11 5'   # CUSTOMIZE: Currently Fridays midnight PDT, exc. July and December
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Run in dry-run mode without posting comments or updating issues'
+        type: choice
+        options:
+          - 'True'
+          - 'False'
+        default: 'False'
+
+# Default token permissions
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  Add-Update-Label-Weekly:
+    runs-on: ubuntu-latest
+    if: github.repository == 'your-project/repo-name'   # CUSTOMIZE: Change to your project repo name
+    steps:
+      - uses: actions/checkout@v5
+      - uses: hackforla/maintenance-actions/add-update-label-weekly@v0
+        with:
+          github-token: ${{ secrets.PROJECT_GRAPHQL_TOKEN }}   # CUSTOMIZE: Change to your project secret / token
+          dry-run: ${{ github.event.inputs.dry-run || 'false' }}

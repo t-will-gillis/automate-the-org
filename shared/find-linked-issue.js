@@ -25,4 +25,4 @@ function findLinkedIssue(text) {
 
 }
 
-module.exports = findLinkedIssue;
+export default findLinkedIssue;
