@@ -6,15 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- refactor: Updated index.js
+- refactor: Updated /dist/index.js
+- docs: Added notes to CHANGELOG.md
 
-### Planned
-- Dry-run mode for testing without making changes
+## [Planned-for-Future]
+- feat: Dry-run mode for testing without making changes
 - Additional maintenance workflows
 - Enhanced error reporting
 - Label validation tools
-- PROJECT_SETUP.md for consuming projects
-- Comprehensive documentation and examples
-- Troubleshooting guide
+- feat: PROJECT_SETUP.md for consuming projects
+- docs: Comprehensive documentation and examples
+- docs: Troubleshooting guide
 
 ## v0.1.0 - 2025-10-24
 
@@ -49,6 +52,19 @@ We follow semantic versioning:
 - **Minor (v1.0.0 → v1.1.0)**: New features, backward compatible
 - **Patch (v1.0.0 → v1.0.1)**: Bug fixes, backward compatible
 
+### Conventional Commit Keywords
+
+|  Keyword  |                     Meaning                    |     Impact on SemVer    |
+|:---------:|:----------------------------------------------:|:-----------------------:|
+| `feat:`     | New feature                                    | Minor version bump      |
+| `fix:`      | Bug fix                                        | Patch version bump      |
+| `chore:`    | Maintenance / tooling / non-user-facing change | Usually no version bump |
+| `perf:`     | Performance improvement                        | Usually patch           |
+| `docs:`     | Documentation only                             | No version bump         |
+| `refactor:` | Code change, no feature added or bug fixed     | Usually no version bump |
+| `test:`     | Add or fix tests                               | No version bump         |
+| `style:`    | Formatting / linting                           | No version bump         |
+
 ### Version Tags for Consumers
 
 Projects can reference versions in multiple ways:
@@ -69,43 +85,22 @@ uses: your-org/automate-the-org/add-update-label-weekly@main
 
 ---
 
-## Migration Guides
+## Releasing a New Version
 
-### Upgrading from Pre-1.0 (Legacy Implementation)
+This project uses **Semantic Versioning** and a manual `[Unreleased]` changelog workflow.
 
-If you're migrating from a project-local implementation:
+### Steps for a Release
 
-1. **Create label directory** (`.github/automate-the-org/label-directory.yml`)
-   ```yaml
-   statusUpdated: "Status: Updated"
-   statusInactive1: "Status: To Update"
-   statusInactive2: "Status: Inactive"
-   # Add your other labels...
-   ```
+1. Add all user-facing changes to the `[Unreleased]` section of `CHANGELOG.md`.
+2. Decide the next version according to [SemVer](https://semver.org/):
+   - `patch` → bug fix only (v0.1.1 → v0.1.2)
+   - `minor` → new feature (v0.1.1 → v0.2.0)
+   - `major` → breaking change (v0.1.1 → v1.0.0)
+3. Run the release script:
 
-2. **Create config file** (`.github/automate-the-org/add-update-label-config.yml`)
-   - Copy your hardcoded values from the old implementation
-   - Use example config as a template
+```bash
+./release.sh <new-version>
 
-3. **Update workflow file** (`.github/workflows/maintenance.yml`)
-   ```yaml
-   # Old
-   - uses: actions/github-script@v7
-     with:
-       script: |
-         # Inline script here...
-   
-   # New
-   - uses: your-org/automate-the-org/add-update-label-weekly@v1
-     with:
-       github-token: ${{ secrets.GITHUB_TOKEN }}
-   ```
-
-4. **Test with dry-run** before going live
-
-5. **Remove old files** once confirmed working
-   - Old inline scripts
-   - Old local action files
 
 ---
 
