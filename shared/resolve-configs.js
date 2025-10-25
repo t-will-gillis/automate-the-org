@@ -32,7 +32,7 @@ function resolveConfigs({
     try {
       const fileContents = fs.readFileSync(fullPath, 'utf8');
       projectConfig = yaml.load(fileContents) || {};
-      logger.log(`Loaded configuration from: ${configPath}`);
+      logger.info(`Loaded configuration from: ${configPath}`);
     } catch (error) {
       if (error.name === 'YAMLException') {
         throw new Error(

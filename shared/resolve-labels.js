@@ -49,7 +49,7 @@ async function resolveLabels({
     throw error;
   }
   
-  logger.log(`Loaded label directory from: ${labelDirectoryPath}`);
+  logger.info(`Loaded label directory from: ${labelDirectoryPath}`);
   // logger.info(`labelKeys found: ${Object.keys(labelDirectory).join(', ')}`);
   
   // Check that required labelKeys exist in the label directory

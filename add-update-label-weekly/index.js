@@ -19,7 +19,8 @@ async function run() {
     // Get action inputs
     const token = core.getInput('github-token', { required: true });
     const configPath = core.getInput('config-path') || '.github/maintenance-actions/add-update-label-config.yml';
-    const dryRun = core.getInput('dry-run') || 'false';
+    const dryRunInput = core.getInput('dry-run') || 'false';
+    const dryRun = (dryRunInput).toLowerCase() === 'true';
     dryRun && logger.warn(`Running in DRY-RUN mode: No changes will be applied`);
     
     // Initialize octokit/GitHub client
