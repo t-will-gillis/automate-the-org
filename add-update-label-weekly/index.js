@@ -3,7 +3,7 @@ const github = require('@actions/github');
 const { logger } = require('../shared/format-log-messages');
 const resolveConfigs = require('../shared/resolve-configs');
 const resolveLabels = require('../shared/resolve-labels');
-const addUpdateLabelWeekly = require('../core/REV-add-update-label-weekly');
+const addUpdateLabelWeekly = require('../core/add-update-label-weekly');
 const yaml = require('js-yaml'); 
 
 /**

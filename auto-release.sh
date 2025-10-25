@@ -3,7 +3,8 @@ set -e
 
 # --- CONFIG ---
 CHANGELOG="CHANGELOG.md"
-MAIN_BRANCH="main"
+PACKAGE_JSON="package.json"
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 # --- 1. Get last git tag ---
 LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
@@ -19,6 +20,15 @@ else
   exit 1
 fi
 
+# --- 1.5. Confirm branch ---
+echo ""
+echo "⚠️ You are working on: --> $CURRENT_BRANCH"
+echo ""
+read -p "Proceed with this branch? (y/N) " CONFIRM
+if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
+  echo "Release canceled. Change to the desired branch."
+  exit 0
+fi
 # --- 2. Show last version ---
 echo "Last version: $LAST_TAG"
 
@@ -66,28 +76,34 @@ if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
   exit 0
 fi
 
-# --- 6. Create annotated git tag ---
+# --- 6. Update package.json version ---
+sed -i.bak -E "s/\"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"/\"version\": \"$MAJOR.$MINOR.$PATCH\"/" $PACKAGE_JSON
+rm $PACKAGE_JSON.bak
+
+
+# --- 7. Create annotated git tag ---
 git tag -a $NEW_VERSION -m "Release $NEW_VERSION
 
 Changes:
 $UNRELEASED_CHANGES"
 
-# --- 7. Update CHANGELOG.md ---
+# --- 8. Update CHANGELOG.md ---
 DATE=$(date +%F)
 
 # Append new version header with date and changes
 sed -i "/## \[Unreleased\]/a \
-## [$NEW_VERSION] - $DATE\n$UNRELEASED_CHANGES" $CHANGELOG
+## [$NEW_VERSION] - $DATE\\
+$UNRELEASED_CHANGES" $CHANGELOG
 
 # Clear [Unreleased] section
 sed -i "/## \[Unreleased\]/,+1d" $CHANGELOG
 
-# Commit the updated changelog
-git add $CHANGELOG
-git commit -m "Update CHANGELOG for $NEW_VERSION release"
+# --- 9. Commit updated files ---
+git add $CHANGELOG $PACKAGE_JSON
+git commit -m "Update CHANGELOG and package.json for $NEW_VERSION release"
 
-# --- 8. Push changes ---
-git push origin $MAIN_BRANCH
+# --- 10. Push changes ---
+git push origin $CURRENT_BRANCH
 git push origin $NEW_VERSION
 
 echo -e "\n✅ Release $NEW_VERSION created and pushed successfully!"

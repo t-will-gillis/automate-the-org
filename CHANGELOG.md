@@ -6,9 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- refactor: Updated index.js
-- refactor: Updated /dist/index.js
-- docs: Added notes to CHANGELOG.md
+
 
 ## [Planned-for-Future]
 - feat: Dry-run mode for testing without making changes
@@ -18,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - feat: PROJECT_SETUP.md for consuming projects
 - docs: Comprehensive documentation and examples
 - docs: Troubleshooting guide
+
+## v0.1.1 - 2025-10-25
+- refactor: Updated index.js
+- refactor: Updated /dist/index.js
+- docs: Added notes to CHANGELOG.md
 
 ## v0.1.0 - 2025-10-24
 

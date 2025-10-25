@@ -49,7 +49,7 @@ async function resolveLabels({
     throw error;
   }
   
-  logger.step(`Loaded label directory from: ${labelDirectoryPath}`);
+  logger.log(`Loaded label directory from: ${labelDirectoryPath}`);
   // logger.info(`labelKeys found: ${Object.keys(labelDirectory).join(', ')}`);
   
   // Check that required labelKeys exist in the label directory
@@ -79,7 +79,7 @@ async function resolveLabels({
     logger.info(`Resolved ${Object.keys(resolvedLabels).length} labels`);
     logger.debug(`Resolved labels: ${JSON.stringify(resolvedLabels, null, 2)}`);
   } else {
-    logger.warn('No labels were resolved from the label directory');
+    logger.warn(`No labels were resolved from the label directory`);
   }
   
   return resolvedLabels;

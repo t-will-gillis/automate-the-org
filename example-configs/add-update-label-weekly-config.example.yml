@@ -26,8 +26,9 @@ timeframes:
 projectBoard:
   # Issues with this Project Board status are included in the automation that checks 
   # whether assiginees are updating their issues.  
-  # CUSTOMIZE this to match your equivalent Project Board status.
+  # CUSTOMIZE this to match your Project Board's equivalent, and EXACT, status.
   targetStatus: "In progress (actively working)"
+  questionsStatus: "Questions / In Review"
   
   # Optional: GraphQL node IDs for your project board (for future use)
   # projectBoardIds:
@@ -115,12 +116,14 @@ bots:
 # Bot comment template
 # ==============================================================================
 # Template for the comment posted to issues needing updates
-# Available variables:
+# Variables used by template:
 #   ${assignees}          - @-mentions of all assignees (e.g., "@user1, @user2")
 #   ${label}              - The label being applied (e.g., "Status: To Update")
-#   ${cutoffTime}         - The formatted timestamp of when the issue was last updated
 #   ${statusUpdated}      - The "updated" label name from your label directory
 #   ${statusHelpWanted}   - The "help wanted" label name from your label directory
+#   ${questionsStatus}    - The "questions" status on your Project Board (e.g., "Questions / In Review")
+#   ${teamSlackChannel}   - The name of your team's Slack Channel
+#   ${cutoffTime}         - The formatted timestamp of the issue's last update
 #
 # You can use Markdown formatting to edit this template
 commentTemplate: |
@@ -134,7 +137,9 @@ commentTemplate: |
   4. ETA: "When do you expect this issue to be completed?"
   5. Pictures (optional): "Add any pictures of the visual changes made to the site so far."
 
-  If you need help, be sure to either: 1) place your issue in the "Questions/ In Review" status column of the Project Board and ask for help at your next meeting; 2) put a `${statusHelpWanted}` label on your issue and pull request; or 3) put up a request for assistance on the appropriate channel.
+  If you need help, be sure to either: 1) place your issue in the "Questions/ In Review" status column of the Project Board and ask for help at your next meeting; 2) put a `${statusHelpWanted}` label on your issue and pull request; or 3) put up a request for assistance on the team's \${teamSlackChannel} Slack channel.
+
+  Please note that including your questions in the issue comments- along with screenshots, if applicable- will help us to help you. [Here](https://github.com/hackforla/website/issues/1619#issuecomment-897315561) and [here](https://github.com/hackforla/website/issues/1908#issuecomment-877908152) are examples of well-formed questions.
 
   <sub>You are receiving this comment because your last comment was before ${cutoffTime}.</sub>
   
