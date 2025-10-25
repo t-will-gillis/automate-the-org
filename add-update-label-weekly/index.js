@@ -1,40 +1,47 @@
-import core from '@actions/core';
-import github from '@actions/github';
-import resolveConfigs from '../shared/resolve-configs';
-import resolveLabels from '../shared/resolve-labels';
-import addUpdateLabelWeekly from '../core/add-update-label-weekly';
-import yaml from 'js-yaml';
+const core = require('@actions/core');
+const github = require('@actions/github');
+const { logger } = require('../shared/format-log-messages');
+const resolveConfigs = require('../shared/resolve-configs');
+const resolveLabels = require('../shared/resolve-labels');
+const addUpdateLabelWeekly = require('../core/REV-add-update-label-weekly');
+const yaml = require('js-yaml'); 
 
 /**
- * Main entry to run Add Update Label Weekly action
- * 
+ * Main entry point for the Add Update Label Weekly action
+ * Orchestrates configuration loading, label resolution, and workflow execution
  */
 async function run() {
   try {
-    console.log(`=`.repeat(60));
-    console.log(`"Add Update Label Weekly" Starting...`);
-    console.log(`=`.repeat(60));
-
+    logger.log(`=`.repeat(60));
+    logger.log(`Add Update Label Weekly starting...`);
+    logger.log(`=`.repeat(60));
+    
     // Get action inputs
     const token = core.getInput('github-token', { required: true });
-    const dryRunInput = core.getInput('dry-run') || 'false';
-    const dryRun = dryRunInput.toLowerCase() === 'true';
-    if (dryRun) {
-      console.log(`⚠️ Running in Dry-Run mode: No comments will be posted or issues updated.`);
-    }
-
-    // Initialize octokit client
+    const configPath = core.getInput('config-path') || '.github/maintenance-actions/add-update-label-config.yml';
+    const dryRun = core.getInput('dry-run') || 'false';
+    dryRun && logger.warn(`Running in DRY-RUN mode: No changes will be applied`);
+    
+    // Initialize octokit/GitHub client
     const octokit = github.getOctokit(token);
     const context = github.context;
-
-    // Get config values
+    
+    // Get project repository path
     const projectRepoPath = process.env.GITHUB_WORKSPACE;
-    const configPath = core.getInput('config-path') || '.github/maintenance-actions/add-update-label-config.yml';
+    if (!projectRepoPath) {
+      throw new Error(`GITHUB_WORKSPACE environment variable not set`);
+    }
+    
+    logger.info(`Project repository: ${context.repo.owner}/${context.repo.repo}`);
+    logger.info(`Working directory: ${projectRepoPath}`);
+    logger.log(``);
+    
+    // Define workflow-specific defaults
     const defaults = getDefaultConfigs();
-
-    // Resolve final configuration
-    console.log(`▶️ Resolving Configurations...`);
-    const config = resolveConfigs({          // If there is an error, try `resolveConfigs.resolve({ })`
+    
+    // Load and merge configuration
+    logger.step(`Resolving configurations...`);
+    const config = resolveConfigs.resolve({
       projectRepoPath,
       configPath,
       defaults,
@@ -45,53 +52,67 @@ async function run() {
         'timeframes.inactiveByDays',
         'timeframes.upperLimitDays',
         'projectBoard.targetStatus',
+        'projectBoard.questionsStatus',
         'commentTemplate',
       ],
     });
-    console.log(``);
-
+    logger.log(``);
+    
+    // Determine label directory path from config
+    const labelDirectoryPath = config.labelDirectoryPath || '.github/maintenance-actions/label-directory.yml';
+    
     // Resolve label keys to label names
-    console.log(`▶️ Resolving Labels...`);
-    const labels = await resolveLabels({
+    logger.step(`Resolving labels...`);
+    const labels = await resolveLabels.resolve({
       projectRepoPath,
-      labelDirectoryPath: config.labelDirectoryPath,
-      requiredLabelKeys: config.labels.required,
-      ignoredLabelKeys: config.labels.ignored,
+      labelDirectoryPath,
+      requiredLabelKeys: [
+        'statusUpdated',
+        'statusInactive1',
+        'statusInactive2',
+      ],
+      optionalLabelKeys: [
+        'draft',
+        'er',
+        'epic',
+        'dependency',
+        'skillsIssueCompleted',
+        'statusHelpWanted',
+      ],
     });
-    console.log(``);
-
-    // Run main workflow function
-    console.log(`▶️ Running "Add Update Label Weekly" Workflow...`);
+    logger.log(``);
+    
+    // Execute the workflow
+    logger.step(`Running Add Update Label Weekly workflow...`);
+    logger.log(``);
+    
     await addUpdateLabelWeekly({
       github: octokit,
       context,
-      config,
       labels,
+      config,
     });
-    console.log(``);
-    console.log(`=`.repeat(60));
-    console.log(`"Add Update Label Weekly" - Completed Successfully`);
-    console.log(`=`.repeat(60));
-
+    
+    logger.log(``);
+    logger.log(`=`.repeat(60));
+    logger.success(`Add Update Label Weekly - completed successfully`);
+    logger.log(`=`.repeat(60));
+    
   } catch (error) {
-    console.error(``);
-    console.error(`=`.repeat(60));
-    console.error(`"Add Update Label Weekly" - Failed`);
-    console.error(`=`.repeat(60));
-    console.error(`Error details: ${error.message}`);
+    logger.log(``);
+    logger.log(`=`.repeat(60));
+    logger.log(`Add Update Label Weekly - failed`);
+    logger.log(`=`.repeat(60));
     if (error.stack) {
       console.error(`Stack trace: ${error.stack}`);
     }
-    core.setFailed(error.message);
+    core.setFailed(`Action failed: ${error.message}`);
   }
 }
 
-
-
-
 /**
- * Get default configuration values for the workflow
- * @returns {Object} - Default configuration object
+ * Returns default values for workflow if not specified in config
+ * @returns {Object}    - Default configurations if not specified in config file
  */
 function getDefaultConfigs() {
   return {
@@ -101,40 +122,41 @@ function getDefaultConfigs() {
       inactiveByDays: 14,    // Issues not updated for this many days are marked as inactive
       upperLimitDays: 35,    // Bot comments older than this are not checked (to reduce API calls)
     },
-
-    projectBoardStatuses: {
-      targetStatuses: [       // Project board status-columns to monitor
-        'In progress (actively working)',
+    
+    projectBoard: {
+      targetStatus: 'In progress (actively working)', 
+      questionsStatus: 'Questions / In Review',
+    },
+    
+    labels: {
+      ignored: [
+        'draft',
+        'er',
+        'epic',
+        'dependency',
+        'skillsIssueCompleted',
+        'complexity0'
       ],
     },
-
-    labels: {
-      required: [],
-      ignored: [],
-    },
-
+    
     bots: [
       'github-actions[bot]',
-      'HackforLA[bot]',
+      'HackforLABot',
     ],
 
-    slackChannel: '#hfla-site',
-
+    teamSlackChannel: '#hfla-site',
+    
     timezone: 'America/Los_Angeles',
-
+    
     commentTemplate: getDefaultCommentTemplate(),
-
-    labelDirectoryPath: '.github/maintenance-actions/_data/label-directory.yml',
-
-    dryRun: false,
+    
+    labelDirectoryPath: '.github/maintenance-actions/label-directory.yml',
   };
 }
 
-
-
 /**
  * Returns the default comment template
- * @returns {string} - Default comment template
+ * @returns {string} Comment template with placeholders
  */
 function getDefaultCommentTemplate() {
   return `Hello \${assignees}!
@@ -147,7 +169,9 @@ Please add an update comment using the below template (even if you have a pull r
 4. ETA: "When do you expect this issue to be completed?"
 5. Pictures (optional): "Add any pictures of the visual changes made to the site so far."
 
-If you need help, be sure to either: 1) place your issue in the "Questions/ In Review" status column of the Project Board and ask for help at your next meeting; 2) put a \`\${statusHelpWanted}\` label on your issue and pull request; or 3) put up a request for assistance on the \${slackChannel} channel. Please note that including your questions in the issue comments- along with screenshots, if applicable- will help us to help you. [Here](https://github.com/hackforla/website/issues/1619#issuecomment-897315561) and [here](https://github.com/hackforla/website/issues/1908#issuecomment-877908152) are examples of well-formed questions.
+If you need help, be sure to either: 1) place your issue in the \${questionsStatus} status column of the Project Board and ask for help at your next meeting; 2) put a \`\${statusHelpWanted}\` label on your issue and pull request; or 3) put up a request for assistance on the team's \${teamSlackChannel} Slack channel.  
+
+Please note that including your questions in the issue comments- along with screenshots, if applicable- will help us to help you. [Here](https://github.com/hackforla/website/issues/1619#issuecomment-897315561) and [here](https://github.com/hackforla/website/issues/1908#issuecomment-877908152) are examples of well-formed questions.
 
 <sub>You are receiving this comment because your last comment was before \${cutoffTime}.</sub>
 
