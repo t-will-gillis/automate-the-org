@@ -1,19 +1,21 @@
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
-import { load, YAMLException } from 'js-yaml';
+// Import modules
+const fs = require('fs');
+const path = require('path');
+const yaml = require('js-yaml');
+const { logger } = require('./format-log-messages');
 
 /**
- * Resolves configuration settings by merging defaults, project configs, and overrides
- * @param {Object} options                       - The options object
+ * Resolves configuration by merging defaults, project config, and overrides
+ * @param {Object} options
  * @param {string} options.projectRepoPath       - Path to the project repository
  * @param {string} options.configPath            - Relative path to config file
  * @param {Object} options.defaults              - Default configuration values
- * @param {Object} options.overrides             - Runtime overrides (from action.yml inputs)
+ * @param {Object} options.overrides             - Runtime overrides (from action inputs)
  * @param {Array<string>} options.requiredFields - Required fields in dot-notation
  * @returns {Object}                             - Merged and validated configuration
  */
-function resolveConfig({ 
-  projectRepoPath = process.env.GITHUB_WORKSPACE, 
+function resolveConfigs({ 
+  projectRepoPath = process.env.GITHUB_WORKSPACE,
   configPath, 
   defaults = {}, 
   overrides = {}, 
@@ -21,98 +23,107 @@ function resolveConfig({
 }) {
 
   // Construct full path to config file
-  const fullConfigPath = join(projectRepoPath, configPath);
+  const fullPath = path.join(projectRepoPath, configPath);
 
   let projectConfig = {};
-  // Load project configuration if file exists
-  if (existsSync(fullConfigPath)) {
+  
+  // Load project config if it exists, continue with defaults if not
+  if (fs.existsSync(fullPath)) {
     try {
-      const fileContents = readFileSync(fullConfigPath, 'utf8');
-      projectConfig = load(fileContents) || {};
-      console.log(`✅ Loaded config file from ${configPath}`);
+      const fileContents = fs.readFileSync(fullPath, 'utf8');
+      projectConfig = yaml.load(fileContents) || {};
+      logger.step(`Loaded configuration from: ${configPath}`);
     } catch (error) {
-      if (error instanceof YAMLException) {
-        throw new Error(`❌ Failed to read or parse config file at ${configPath}: ${error.message}`);
+      if (error.name === 'YAMLException') {
+        throw new Error(
+          `Failed to parse configuration YAML at ${configPath}: ${error.message}`
+        );
       }
       throw error;
     }
   } else {
-    console.log(`⚠️ Config file not found at ${configPath}, proceeding with defaults and overrides.`);
+    logger.warn(`Configuration file not found at ${configPath}, using defaults only`);
   }
-
+  
   // Deep merge: defaults < projectConfig < overrides
   const config = deepMerge(defaults, projectConfig, overrides);
-
+  
+  // Log the final configuration in DEBUG mode
+  logger.debug('Final configuration:');
+  logger.debug(JSON.stringify(config, null, 2));
+  
   // Validate required fields
   validateRequiredFields(config, requiredFields);
-
+  
   return config;
 }
 
-
-
 /**
- * Deep merges multiple objects
- * @param  {...Object} sources - Objects to merge
- * @returns {Object}           - Merged object
+ * Deep merges multiple objects, with later objects overriding earlier ones
+ * @param {...Object} objects - Objects to merge
+ * @returns {Object} Merged object
  */
 function deepMerge(...objects) {
   const result = {};
-
-  for (const obj of objects.filter(Boolean)) {
-    for (const [key, value] of Object.entries(obj)) {
+  
+  for (const obj of objects) {
+    if (!obj) continue;
+    
+    for (const key in obj) {
+      if (!obj.hasOwnProperty(key)) continue;
+      
+      const value = obj[key];
+      
       // If value is an object (but not array or null), recurse
       if (value && typeof value === 'object' && !Array.isArray(value)) {
-        result[key] = deepMerge(result[key], value);
+        result[key] = deepMerge(result[key] || {}, value);
       } 
-      // Else copy array or primitive value
-      else {
+      // For arrays and primitives, override completely
+      else if (value !== undefined) {
         result[key] = value;
       }
     }
   }
-
+  
   return result;
 }
 
-
-
-/** * Validates that required fields are present in the config
- * @param {Object} config                - The configuration object
- * @param {Array<string>} requiredFields - List of required fields in dot-notation
+/**
+ * Validates that required fields exist in the config
+ * @param {Object} config                - Configuration object to validate
+ * @param {Array<string>} requiredFields - Array of dot-notation field paths
  */
 function validateRequiredFields(config, requiredFields) {
   const missing = [];
-
+  
   for (const field of requiredFields) {
     const keys = field.split('.');
     let value = config;
-
-    // traverse nested keys (e.g., "database.host")
+    
+    // Navigate through nested structure
     for (const key of keys) {
-      if (value == null || typeof value !== 'object') {
+      if (value === null || value === undefined) {
         value = undefined;
         break;
       }
       value = value[key];
     }
-
-    // flag field if missing or empty
-    if (value == null || value === '') {
+    
+    // Check if value exists and is not empty
+    if (value === undefined || value === null || value === '') {
       missing.push(field);
     }
   }
-
-  // throw error if any required field is missing
+  
   if (missing.length > 0) {
     throw new Error(
-      `❌ Config validation failed. Missing required fields:
-        ${missing.join('\n  ')}
-        ⮡  Provide required fields as shown in the config files`
+      `Config validation failed. Missing required fields:\n` +
+      `  ${missing.join('\n  ')}\n` +
+      `   ⮡  Provide required fields as shown in the config files`
     );
   }
-
-  console.log(`✅ Resolved required configuration fields`);
+  
+  logger.info(`Resolved required configuration fields`);
 }
 
-export default { resolveConfig, deepMerge, validateRequiredFields };
+module.exports = { resolve:resolveConfigs, deepMerge, validateRequiredFields };

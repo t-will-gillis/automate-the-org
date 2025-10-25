@@ -53,11 +53,11 @@ async function queryIssueInfo(github, context, issueNum) {
     // Similarly, find node with 'optionId' property, then get is 'optionId' value
     const statusId = projectData[0].fieldValues.nodes.find((item) => 
       item.hasOwnProperty("optionId")).optionId;
-  
+
     return { id, statusName, statusId };
   } catch (error) {
     throw new Error(`Error finding Issue #${issueNum} id and status; error = ${error}`);
   }
 }
 
-export default queryIssueInfo;
+module.exports = queryIssueInfo;

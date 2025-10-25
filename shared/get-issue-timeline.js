@@ -1,3 +1,5 @@
+const { logger } = require('./format-log-messages');
+
 /**
  * Function that returns the timeline of an issue
  * @param {Object} github                 - GitHub object from actions/github-script
@@ -30,7 +32,7 @@ async function getIssueTimeline(github, context, issueNum) {
         page++;
       }
     } catch (err) {
-      console.error(`Error fetching issue timeline (page ${page}):`, err);
+      logger.error(`Error fetching issue timeline (page ${page}):`, err);
       break;
     }
   }
@@ -38,4 +40,4 @@ async function getIssueTimeline(github, context, issueNum) {
   return timelineArray;
 }
 
-export default getIssueTimeline;
+module.exports = getIssueTimeline;

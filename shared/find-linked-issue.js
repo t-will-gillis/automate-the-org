@@ -1,3 +1,5 @@
+const { logger } = require('./format-log-messages');
+
 /**
  * Function that returns the number of a linked issue (if exists)
  * @param {String} text       - the text to search for keywords
@@ -18,11 +20,10 @@ function findLinkedIssue(text) {
       return parseInt(matches[0][1], 10);
     }
   } catch (err) {
-    console.error('Regex error in findLinkedIssue:', err);
+    logger.error('Regex error in findLinkedIssue:', err);
   }
 
   return false;
-
 }
 
-export default findLinkedIssue;
+module.exports = findLinkedIssue;

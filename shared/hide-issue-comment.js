@@ -1,3 +1,5 @@
+const { logger } = require('./format-log-messages');
+
 /**
  * Minimize issue comment as OUTDATED given the comment's node Id
  * @param {String} nodeId - node Id of comment to be marked as 'OUTDATED'
@@ -21,9 +23,10 @@ async function minimizeIssueComment(github, nodeId) {
 
   try {
     await github.graphql(mutation, variables);
-  } catch (error) {
-    throw new Error(`Error in minimizeIssueComment() function: ${error}`);
+  } catch (err) {
+    logger.error(`Error minimizing comment with nodeId ${nodeId}:`, err);
+    throw new Error(err);
   }
 }
 
-export default minimizeIssueComment;
+module.exports = minimizeIssueComment;
