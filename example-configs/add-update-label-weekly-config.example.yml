@@ -1,0 +1,151 @@
+# Configuration for "Add Update Label Weekly" action
+# Copy this file to your project: `.github/maintenance-actions/add-update-label-config.yml`
+# Customize the values below for your project's needs
+
+
+
+# ==============================================================================
+# Time thresholds (in days)
+# ==============================================================================
+timeframes:
+  
+  updatedByDays: 3     # Issues updated within this many days are considered current
+  commentByDays: 7    # Issues not updated for this many days are prompted for an update
+  inactiveByDays: 14    # Issues not updated for this many days are marked as inactive
+
+  # To reduce issue clutter, a GraphQL mutation iterates through the bot's previous 
+  # comments and minimizes( hides) repetitions by default. In order to avoid GitHub's 
+  # rate limiting on GraphQL mutations, bot comments older than the `upperLimitDays` 
+  # are not minimized - this should have happened during previous runs.
+  upperLimitDays: 35   
+
+
+# ==============================================================================
+# Project board configuration
+# ==============================================================================
+projectBoard:
+  # Issues with this Project Board status are included in the automation that checks 
+  # whether assiginees are updating their issues.  
+  # CUSTOMIZE this to match your equivalent Project Board status.
+  targetStatus: "In progress (actively working)"
+  
+  # Optional: GraphQL node IDs for your project board (for future use)
+  # projectBoardIds:
+  #   projectNodeId: "PVT_kwDOABcD..."
+  #   statusFieldId: "PVTSSF_lADO..."
+
+
+
+# ==============================================================================
+# Label Directory
+# ==============================================================================
+# This workflow uses issue labels to:
+#   1. Flag issues that need updates from the assignee, and
+#   2. Ignore issues that do not need to be checked.
+#
+# The workflow relies on 'label keys' to identify the purpose of each label. These
+# 'label keys' correspond to the actual 'label names' (i.e. `Complexity: Medium`, 
+# `role: front end`, etc.) for the label. The `label-directory.yml` file defines 
+# the key-value pair mapping between 'label keys' and 'Label Name' values:
+# 
+#   labelKey1: "Label Name 1"
+#   labelKey2: "Label Name 2"
+#
+# The path to your project's label directory file (relative to the project root) 
+# is defined below. The workflow uses this file to correlate label keys with 
+# the actual labels in your repository.
+
+labelDirectoryPath: ".github/maintenance-actions/label-directory.yml"
+
+# The 'label keys' are used internally and should not be changed. Since, however, 
+# each project might name issue labels differently, this workflow allows you to 
+# customize the 'label name' values to match your project's actual issue labels.
+# Note especially the next section. 
+
+
+
+# ==============================================================================
+# Labels used by this workflow
+# ==============================================================================
+ 
+labels:
+  # Required labels
+  #
+  # The following 'label keys' must be mapped to your project's actual 'label names' 
+  # via the `label-directory.yml` file. These labels are used by the workflow to 
+  # identify issues needing updates and to apply appropriate labels.
+
+  required:
+    - statusUpdated
+    - statusInactive1
+    - statusInactive2
+    - statusHelpWanted
+
+  # Ignored labels - optional
+  #
+  # The following labels are optional. The automation will ignore any 
+  # issues with a label name corresponding with the label keys shown here.
+  # For example, if an issue has the "Draft" label, it will be ignored on the
+  # update check.
+  #
+  # You may add or remove label keys to this list as needed.
+
+  ignored:
+    - draft
+    - er
+    - epic
+    - dependency
+    - complexity0
+
+
+
+# ==============================================================================
+# Bot configuration
+# ==============================================================================
+# Bot usernames whose comments should be minimized when they become outdated
+# Comments are minimized if they're between 'commentByDays' and 'upperLimitDays' old
+bots:
+  - "github-actions[bot]"
+  - "HackforLABot"
+  # As needed, add any additional bot usernames here
+
+
+
+# ==============================================================================
+# Bot comment template
+# ==============================================================================
+# Template for the comment posted to issues needing updates
+# Available variables:
+#   ${assignees}          - @-mentions of all assignees (e.g., "@user1, @user2")
+#   ${label}              - The label being applied (e.g., "Status: To Update")
+#   ${cutoffTime}         - The formatted timestamp of when the issue was last updated
+#   ${statusUpdated}      - The "updated" label name from your label directory
+#   ${statusHelpWanted}   - The "help wanted" label name from your label directory
+#
+# You can use Markdown formatting to edit this template
+commentTemplate: |
+  Hello ${assignees}!
+  
+  Please add an update comment using the below template (even if you have a pull request). Afterwards, remove the `${label}` label and add the `${statusUpdated}` label.
+
+  1. Progress: "What is the current status of your issue? What have you completed and what is left to do?"
+  2. Blockers: "Explain any difficulties or errors encountered."
+  3. Availability: "How much time will you have this week to work on this issue?"
+  4. ETA: "When do you expect this issue to be completed?"
+  5. Pictures (optional): "Add any pictures of the visual changes made to the site so far."
+
+  If you need help, be sure to either: 1) place your issue in the "Questions/ In Review" status column of the Project Board and ask for help at your next meeting; 2) put a `${statusHelpWanted}` label on your issue and pull request; or 3) put up a request for assistance on the appropriate channel.
+
+  <sub>You are receiving this comment because your last comment was before ${cutoffTime}.</sub>
+  
+  Thanks for being part of HfLA!
+
+
+
+# ==============================================================================
+# Advanced options
+# ==============================================================================
+# Uncomment and configure these if needed for your project
+
+# # Custom timezone for cutoffTime display in comments (default: America/Los_Angeles)
+# timezone: "America/New_York"
