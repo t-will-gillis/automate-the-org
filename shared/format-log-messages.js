@@ -12,11 +12,14 @@ const colors = {
   gray: "\x1b[90m",
 };
 
-const DEBUG = true;
-  // process.env.DRY-RUN === "true" || process.env.DRY-RUN === "1" || 
-  // process.env.DEBUG === "true" || process.env.DEBUG === "1";
+const dryRun = false;
 
 const logger = {
+  // Set dry-run mode
+  setDryRun: (value) => {
+    dryRun = value;
+  },
+
   // High-level step; start of a new logical phase
   step: (msg) => console.log(`${colors.blue}[STEP]${colors.reset} ${msg}`),
 
@@ -40,7 +43,7 @@ const logger = {
 
   // Diagnostic detail; for dry-run/debug or verbose mode
   debug: (msg) => {
-    if (DEBUG) {
+    if (dryRun) {
       // console.log(`${colors.magenta}[DEBUG]${colors.reset} ${msg}`);
       console.log(`${colors.gray}[DEBUG]${colors.reset} ${msg}`);
     }

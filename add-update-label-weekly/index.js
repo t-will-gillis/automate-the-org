@@ -22,6 +22,7 @@ async function run() {
     const dryRunInput = core.getInput('dry-run') || 'false';
     const dryRun = (dryRunInput).toLowerCase() === 'true';
     dryRun && logger.warn(`Running in DRY-RUN mode: No changes will be applied`);
+    logger.setDryRun(dryRun);
     
     // Initialize octokit/GitHub client
     const octokit = github.getOctokit(token);

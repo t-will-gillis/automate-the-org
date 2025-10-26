@@ -92,7 +92,6 @@ BEGIN {printed=0}
     print "_No unreleased changes yet._\n"
     print "## " ver 
     print date
-    print content
     print ""
     printed=1
     next
