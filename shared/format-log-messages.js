@@ -12,9 +12,9 @@ const colors = {
   gray: "\x1b[90m",
 };
 
-const DEBUG =
-  process.env.DRY-RUN === "true" || process.env.DRY-RUN === "1" || 
-  process.env.DEBUG === "true" || process.env.DEBUG === "1";
+const DEBUG = true;
+  // process.env.DRY-RUN === "true" || process.env.DRY-RUN === "1" || 
+  // process.env.DEBUG === "true" || process.env.DEBUG === "1";
 
 const logger = {
   // High-level step; start of a new logical phase
