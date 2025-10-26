@@ -65,9 +65,11 @@ if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
   exit 0
 fi
 
-# --- 6. Update package.json version ---
-sed -i.bak -E "s/\"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"/\"version\": \"$MAJOR.$MINOR.$PATCH\"/" "$PACKAGE_JSON"
-rm "$PACKAGE_JSON.bak"
+# --- 6. Update package.json and package-lock.json version ---
+if [ -f "$PACKAGE_JSON" ]; then
+  npm version "$MAJOR.$MINOR.$PATCH" --no-git-tag-version >/dev/null 2>&1
+  echo "Updated package.json and package-lock.json to $MAJOR.$MINOR.$PATCH"
+fi
 
 # --- 7. Create annotated git tag ---
 git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION
@@ -85,7 +87,7 @@ BEGIN {printed=0}
   if ($0 ~ /^## \[Unreleased\]/ && !printed) {
     print $0
     print "_No unreleased changes yet._\n"
-    print "## [" ver "] - " date "\n" content "\n"
+    print "## " ver " - " date "\n" content "\n"
     printed=1
     next
   }

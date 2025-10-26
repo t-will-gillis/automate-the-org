@@ -240,6 +240,10 @@ function isTimelineOutdated(timeline, issueNum, assignees) { // assignees is an 
  */
 async function removeLabels(issueNum, ...labelsToRemove) {
   for (let label of labelsToRemove) {
+    if (config.dryRun) {
+      logger.debug(`Would remove '${label}' from issue #${issueNum}`);
+      continue;
+    }
     try {
       // https://docs.github.com/en/rest/issues/labels?apiVersion=2022-11-28#remove-a-label-from-an-issue
       await github.request('DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels/{name}', {
@@ -263,6 +267,10 @@ async function removeLabels(issueNum, ...labelsToRemove) {
  * @param {Array} labels      -an array containing the labels to add (captures the rest of the parameters)
  */
 async function addLabels(issueNum, ...labelsToAdd) {
+  if (config.dryRun) {
+    logger.debug(`Would add '${labelsToAdd}' to issue #${issueNum}`);
+    return;
+  }
   try {
     // https://octokit.github.io/rest.js/v20#issues-add-labels
     await github.rest.issues.addLabels({
@@ -282,6 +290,12 @@ async function postComment(issueNum, assignees, labelString) {
   try {
     const assigneeString = createAssigneeString(assignees);
     const instructions = formatComment(assigneeString, labelString);
+
+    if (config.dryRun) {
+      logger.debug(`Would post comment to issue #${issueNum}:`);
+      logger.debug(instructions);
+      return;
+    }
     // https://docs.github.com/en/rest/issues/comments?apiVersion=2022-11-28#create-an-issue-comment
     await github.request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
       owner: context.repo.owner,
@@ -381,6 +395,10 @@ function isCommentByBot(data) {
 // asynchronously minimize all the comments that are outdated (> 1 week old)
 async function minimizeComments(comment_node_ids) {
   for (const node_id of comment_node_ids) {
+    if (config.dryRun) {
+      logger.debug(`Would minimize comment ${node_id}`);
+      continue;
+    }
     await new Promise((resolve) => { setTimeout(resolve, 1000); }); // wait for 1000ms before doing the GraphQL mutation
     await minimizeIssueComment(github, node_id);
   }
@@ -34712,7 +34730,7 @@ function resolveConfigs({
     try {
       const fileContents = fs.readFileSync(fullPath, 'utf8');
       projectConfig = yaml.load(fileContents) || {};
-      logger.log(`Loaded configuration from: ${configPath}`);
+      logger.info(`Loaded configuration from: ${configPath}`);
     } catch (error) {
       if (error.name === 'YAMLException') {
         throw new Error(
@@ -34864,7 +34882,7 @@ async function resolveLabels({
     throw error;
   }
   
-  logger.log(`Loaded label directory from: ${labelDirectoryPath}`);
+  logger.info(`Loaded label directory from: ${labelDirectoryPath}`);
   // logger.info(`labelKeys found: ${Object.keys(labelDirectory).join(', ')}`);
   
   // Check that required labelKeys exist in the label directory
@@ -36837,7 +36855,8 @@ async function run() {
     // Get action inputs
     const token = core.getInput('github-token', { required: true });
     const configPath = core.getInput('config-path') || '.github/maintenance-actions/add-update-label-config.yml';
-    const dryRun = core.getInput('dry-run') || 'false';
+    const dryRunInput = core.getInput('dry-run') || 'false';
+    const dryRun = (dryRunInput).toLowerCase() === 'true';
     dryRun && logger.warn(`Running in DRY-RUN mode: No changes will be applied`);
     
     // Initialize octokit/GitHub client
