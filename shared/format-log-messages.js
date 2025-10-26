@@ -13,7 +13,7 @@ const colors = {
 };
 
 const DEBUG =
-  process.env.DRY_RUN === "true" || process.env.DRY_RUN === "1" || 
+  process.env.DRY-RUN === "true" || process.env.DRY-RUN === "1" || 
   process.env.DEBUG === "true" || process.env.DEBUG === "1";
 
 const logger = {

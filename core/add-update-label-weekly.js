@@ -36,6 +36,8 @@ async function main({ github: g, context: c, labels: l, config: cfg }) {
   labels = l;
   config = cfg;
 
+  logger.log(`DEBUG in addUpdateLabelWeekly: config.dryRun = ${config.dryRun}`);
+
   // Calculate cutoff times from config settings
   const updatedByDays = config.timeframes.updatedByDays;
   const commentByDays = config.timeframes.commentByDays;

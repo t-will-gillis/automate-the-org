@@ -57,6 +57,7 @@ async function run() {
         'commentTemplate',
       ],
     });
+    logger.log(`DEBUG: config.dryRun = ${config.dryRun}`); // Add this line
     logger.log(``);
     
     // Determine label directory path from config
