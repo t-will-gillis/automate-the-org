@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs: Troubleshooting guide
 
 ## [Unreleased]
+_No unreleased changes yet._
+
+## v0.1.6
+2025-10-25
+
 - fix: fix `logger.js` for dry run mode
 
 ## v0.1.5
