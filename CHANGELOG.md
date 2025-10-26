@@ -14,27 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs: Troubleshooting guide
 
 ## [Unreleased]
-_No unreleased changes yet._
-
-## v0.1.7
-2025-10-25
-
-- fix: remove logs 
-
-## v0.1.6
-2025-10-25
-
+- fix: tweak `auto-release.sh`
 - fix: fix `logger.js` for dry run mode
 
-## v0.1.5
-2025-10-25
-- fix: tweak `auto-release.sh`
-
-
-
-## v0.1.4
-2025-10-25
-- fix: tweak `auto-release.sh`
 
 ## v0.1.3
 2025-10-25

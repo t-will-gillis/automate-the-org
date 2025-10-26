@@ -34490,7 +34490,7 @@ const colors = {
   gray: "\x1b[90m",
 };
 
-const dryRun = false;
+let dryRun = false;
 
 const logger = {
   // Set dry-run mode
