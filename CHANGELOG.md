@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+_No unreleased changes yet._
+
+## v0.1.4
+2025-10-25
+- fix: tweak `auto-release.sh`
+
 - fix: tweak `auto-release.sh`
 
 ## Planned-for-Future
