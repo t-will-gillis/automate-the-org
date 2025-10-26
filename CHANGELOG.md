@@ -18,9 +18,7 @@ _No unreleased changes yet._
 
 ## v0.1.5
 2025-10-25
-_No unreleased changes yet._
-
-_No unreleased changes yet._
+- fix: debugging
 
 ## v0.1.4
 2025-10-25
