@@ -90,7 +90,10 @@ BEGIN {printed=0}
   if ($0 ~ /^## \[Unreleased\]/ && !printed) {
     print $0
     print "_No unreleased changes yet._\n"
-    print "## " ver "\n" date "\n" content "\n"
+    print "## " ver 
+    print date
+    print content
+    print ""
     printed=1
     next
   }
