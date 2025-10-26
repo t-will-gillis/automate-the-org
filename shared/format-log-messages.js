@@ -44,8 +44,8 @@ const logger = {
   // Diagnostic detail; for dry-run/debug or verbose mode
   debug: (msg) => {
     if (dryRun) {
-      // console.log(`${colors.magenta}[DEBUG]${colors.reset} ${msg}`);
-      console.log(`${colors.gray}[DEBUG]${colors.reset} ${msg}`);
+      console.log(`${colors.magenta}[DEBUG]${colors.reset} ${msg}`);
+      // console.log(`${colors.gray}[DEBUG]${colors.reset} ${msg}`);
     }
   },
 

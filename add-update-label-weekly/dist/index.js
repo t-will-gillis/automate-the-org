@@ -42,8 +42,6 @@ async function main({ github: g, context: c, labels: l, config: cfg }) {
   labels = l;
   config = cfg;
 
-  logger.log(`DEBUG in addUpdateLabelWeekly: config.dryRun = ${config.dryRun}`);
-
   // Calculate cutoff times from config settings
   const updatedByDays = config.timeframes.updatedByDays;
   const commentByDays = config.timeframes.commentByDays;
@@ -34524,8 +34522,8 @@ const logger = {
   // Diagnostic detail; for dry-run/debug or verbose mode
   debug: (msg) => {
     if (dryRun) {
-      // console.log(`${colors.magenta}[DEBUG]${colors.reset} ${msg}`);
-      console.log(`${colors.gray}[DEBUG]${colors.reset} ${msg}`);
+      console.log(`${colors.magenta}[DEBUG]${colors.reset} ${msg}`);
+      // console.log(`${colors.gray}[DEBUG]${colors.reset} ${msg}`);
     }
   },
 
@@ -36899,7 +36897,6 @@ async function run() {
         'commentTemplate',
       ],
     });
-    logger.log(`DEBUG: config.dryRun = ${config.dryRun}`); // Add this line
     logger.log(``);
     
     // Determine label directory path from config
