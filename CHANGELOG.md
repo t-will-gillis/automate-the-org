@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+_No unreleased changes yet._
+
+## [v0.1.3] - 2025-10-25
+- feat: Added dry-run mode for testing without making changes
+
+- feat: Added dry-run mode for testing without making changes
+
 ## [Planned-for-Future]
 - Additional maintenance workflows
 - Enhanced error reporting
@@ -12,9 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - feat: PROJECT_SETUP.md for consuming projects
 - docs: Comprehensive documentation and examples
 - docs: Troubleshooting guide
-
-## [Unreleased]
-- feat: Added dry-run mode for testing without making changes
 
 ## v0.1.2 - 2025-10-25
 - fix: Add /dist/index.js to commit
