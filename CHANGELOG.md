@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-### Planned-for-Future
+
+
+## [Unreleased]
+- fix: tweak `auto-release.sh`
+
+## Planned-for-Future
 - Additional maintenance workflows
 - Enhanced error reporting
 - Label validation tools
@@ -13,10 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs: Comprehensive documentation and examples
 - docs: Troubleshooting guide
 
-## [Unreleased]
-- fix: tweak `auto-release.sh`
-
-## v0.1.3 
+## v0.1.3
 2025-10-25
 - feat: Added dry-run mode for testing without making changes
 
@@ -28,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 2025-10-25
 - refactor: Updated `index.js`
 - refactor: Updated `/dist/index.js`
-- docs: Added notes to `CHANGELOG.md`
+- docs: Added notes CHANGELOG.md`
 
 ## v0.1.0
 2025-10-24

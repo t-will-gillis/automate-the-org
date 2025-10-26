@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+# To use: Run this after all changes have been made and committed.
+
 # --- CONFIG ---
 CHANGELOG="CHANGELOG.md"
 PACKAGE_JSON="package.json"
@@ -34,7 +36,8 @@ fi
 echo "Last version: $LAST_TAG"
 
 # --- 3. Extract [Unreleased] changes ---
-UNRELEASED_CHANGES=$(awk '/## \[Unreleased\]/{flag=1;next}/^## \[/{flag=0}flag' "$CHANGELOG")
+# UNRELEASED_CHANGES=$(awk '/## \[Unreleased\]/{flag=1;next}/^## \[/{flag=0}flag' "$CHANGELOG")
+UNRELEASED_CHANGES=$(awk '/## \[Unreleased\]/{flag=1;next}/^## /{flag=0}flag' "$CHANGELOG")
 
 if [ -z "$UNRELEASED_CHANGES" ]; then
   echo "No changes found in [Unreleased] section!"
@@ -87,7 +90,7 @@ BEGIN {printed=0}
   if ($0 ~ /^## \[Unreleased\]/ && !printed) {
     print $0
     print "_No unreleased changes yet._\n"
-    print "## " ver " - " date "\n" content "\n"
+    print "## " ver "\n" date "\n" content "\n"
     printed=1
     next
   }
