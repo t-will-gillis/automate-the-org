@@ -1,5 +1,5 @@
 # Configuration for "Add Update Label Weekly" action
-# Copy this file to your project: `.github/maintenance-actions/add-update-label-config.yml`
+# Copy this file to your project: `.github/maintenance-actions/add-update-label-weekly-config.yml`
 # Customize the values below for your project's needs
 
 
@@ -126,6 +126,9 @@ bots:
 #   ${cutoffTime}         - The formatted timestamp of the issue's last update
 #
 # You can use Markdown formatting to edit this template
+
+teamSlackChannel: "#hfla-site"
+
 commentTemplate: |
   Hello ${assignees}!
   
@@ -137,7 +140,7 @@ commentTemplate: |
   4. ETA: "When do you expect this issue to be completed?"
   5. Pictures (optional): "Add any pictures of the visual changes made to the site so far."
 
-  If you need help, be sure to either: 1) place your issue in the "Questions/ In Review" status column of the Project Board and ask for help at your next meeting; 2) put a `${statusHelpWanted}` label on your issue and pull request; or 3) put up a request for assistance on the team's \${teamSlackChannel} Slack channel.
+  If you need help, be sure to either: 1) place your issue in the "${questionsStatus}" status column of the Project Board and ask for help at your next meeting; 2) put a `${statusHelpWanted}` label on your issue and pull request; or 3) put up a request for assistance on the team's ${teamSlackChannel} Slack channel.
 
   Please note that including your questions in the issue comments- along with screenshots, if applicable- will help us to help you. [Here](https://github.com/hackforla/website/issues/1619#issuecomment-897315561) and [here](https://github.com/hackforla/website/issues/1908#issuecomment-877908152) are examples of well-formed questions.
 

@@ -9,9 +9,9 @@ on:
         description: 'Run in dry-run mode without posting comments or updating issues'
         type: choice
         options:
-          - 'True'
-          - 'False'
-        default: 'False'
+          - 'true'
+          - 'false'
+        default: 'true'
 
 # Default token permissions
 permissions:
@@ -24,7 +24,7 @@ jobs:
     if: github.repository == 'your-project/repo-name'   # CUSTOMIZE: Change to your project repo name
     steps:
       - uses: actions/checkout@v5
-      - uses: hackforla/maintenance-actions/add-update-label-weekly@v0
+      - uses: hackforla/maintenance-actions/add-update-label-weekly@v0  # CUSTOMIZE: check most recent version
         with:
           github-token: ${{ secrets.PROJECT_GRAPHQL_TOKEN }}   # CUSTOMIZE: Change to your project secret / token
-          dry-run: ${{ github.event.inputs.dry-run || 'false' }}
+          dry-run: ${{ github.event.inputs.dry-run || 'true' }}

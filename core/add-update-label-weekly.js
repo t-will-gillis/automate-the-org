@@ -355,6 +355,7 @@ function createAssigneeString(assignees) {
   return assigneeString.join(', ');
 }
 
+// Populate default comment template with corresponding values
 function formatComment(assignees, labelString) {
   const options = {
     dateStyle: 'full',
@@ -365,11 +366,13 @@ function formatComment(assignees, labelString) {
   
   let completedInstructions = config.commentTemplate
     .replace(/\$\{assignees\}/g, assignees)
-    .replace(/\$\{cutoffTime\}/g, cutoffTimeString)
     .replace(/\$\{label\}/g, labelString)
     .replace(/\$\{statusUpdated\}/g, labels.statusUpdated || 'Status: Updated')
-    .replace(/\$\{statusHelpWanted\}/g, labels.statusHelpWanted || 'Status: Help Wanted');
-  
+    .replace(/\$\{questionsStatus\}/g, projectBoard.questionsStatus || 'Questions / In Review')
+    .replace(/\$\{statusHelpWanted\}/g, labels.statusHelpWanted || 'Status: Help Wanted')
+    .replace(/\$\{teamSlackChannel\}/g, teamSlackChannel || '#hfla-site')
+    .replace(/\$\{cutoffTime\}/g, cutoffTimeString);
+
   return completedInstructions;
 }
 
@@ -377,12 +380,14 @@ function isCommentByBot(data) {
   // Use bot list from config, default to 'github-actions[bot]'
   const botLogins = config.bots || ['github-actions[bot]'];
   
+  // NOTE: this should not apply if Skills Issues omitted from the scans
   // If the comment includes the MARKER, return false so it is not minimized
   let MARKER = '<!-- Skills Issue Activity Record -->'; 
   if (data.body && data.body.includes(MARKER)) {
     logger.info(`Found "Skills Issue Activity Record" - do not minimize`);
     return false; 
   }
+
   return botLogins.includes(data.actor.login);
 }
 

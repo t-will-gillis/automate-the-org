@@ -22,7 +22,6 @@ _No unreleased changes yet._
 - fix: tweak `auto-release.sh`
 - fix: fix `logger.js` for dry run mode
 
-
 ## v0.1.3
 2025-10-25
 - feat: Added dry-run mode for testing without making changes

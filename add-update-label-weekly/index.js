@@ -18,7 +18,7 @@ async function run() {
     
     // Get action inputs
     const token = core.getInput('github-token', { required: true });
-    const configPath = core.getInput('config-path') || '.github/maintenance-actions/add-update-label-config.yml';
+    const configPath = core.getInput('config-path') || '.github/maintenance-actions/add-update-label-weekly-config.yml';
     const dryRunInput = core.getInput('dry-run') || 'false';
     const dryRun = (dryRunInput).toLowerCase() === 'true';
     dryRun && logger.warn(`Running in DRY-RUN mode: No changes will be applied`);
@@ -86,7 +86,6 @@ async function run() {
     
     // Execute the workflow
     logger.step(`Running Add Update Label Weekly workflow...`);
-    logger.log(``);
     
     await addUpdateLabelWeekly({
       github: octokit,
@@ -171,7 +170,7 @@ Please add an update comment using the below template (even if you have a pull r
 4. ETA: "When do you expect this issue to be completed?"
 5. Pictures (optional): "Add any pictures of the visual changes made to the site so far."
 
-If you need help, be sure to either: 1) place your issue in the \${questionsStatus} status column of the Project Board and ask for help at your next meeting; 2) put a \`\${statusHelpWanted}\` label on your issue and pull request; or 3) put up a request for assistance on the team's \${teamSlackChannel} Slack channel.  
+If you need help, be sure to either: 1) place your issue in the "\${questionsStatus}" status column of the Project Board and ask for help at your next meeting; 2) put a \`\${statusHelpWanted}\` label on your issue and pull request; or 3) put up a request for assistance on the team's \${teamSlackChannel} Slack channel.  
 
 Please note that including your questions in the issue comments- along with screenshots, if applicable- will help us to help you. [Here](https://github.com/hackforla/website/issues/1619#issuecomment-897315561) and [here](https://github.com/hackforla/website/issues/1908#issuecomment-877908152) are examples of well-formed questions.
 
