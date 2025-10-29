@@ -9,7 +9,7 @@ inputs:
   config-path:
     description: 'Path to the configuration file relative to repository root'
     required: false
-    default: '.github/maintenance-actions/add-update-label-weekly-config.yml'
+    default: '.github/workflow-configs/add-update-label-weekly-config.yml'
   dry-run:
     description: 'Run in dry-run mode without posting comments or updating issues'
     required: true

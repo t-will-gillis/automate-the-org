@@ -18,7 +18,7 @@ async function run() {
     
     // Get action inputs
     const token = core.getInput('github-token', { required: true });
-    const configPath = core.getInput('config-path') || '.github/maintenance-actions/add-update-label-weekly-config.yml';
+    const configPath = core.getInput('config-path') || '.github/workflow-configs/add-update-label-weekly-config.yml';
     const dryRunInput = core.getInput('dry-run') || 'false';
     const dryRun = (dryRunInput).toLowerCase() === 'true';
     dryRun && logger.warn(`Running in DRY-RUN mode: No changes will be applied`);
@@ -61,7 +61,7 @@ async function run() {
     logger.log(``);
     
     // Determine label directory path from config
-    const labelDirectoryPath = config.labelDirectoryPath || '.github/maintenance-actions/label-directory.yml';
+    const labelDirectoryPath = config.labelDirectoryPath || '.github/workflow-configs/label-directory.yml';
     
     // Resolve label keys to label names
     logger.step(`Resolving labels...`);
@@ -151,7 +151,7 @@ function getDefaultConfigs() {
     
     commentTemplate: getDefaultCommentTemplate(),
     
-    labelDirectoryPath: '.github/maintenance-actions/label-directory.yml',
+    labelDirectoryPath: '.github/workflow-configs/label-directory.yml',
   };
 }
 

@@ -6,7 +6,7 @@ Centralized GitHub Actions for repository maintenance and automation across the 
 ## Repository Structure
 
 ```markdown
-maintenance-actions/
+workflow-configs/
 │
 ├── add-update-label-weekly/            # "Add Update Label Weekly" workflow
 │   ├── dist/
@@ -93,10 +93,10 @@ Copy and rename the example GitHub Actions Workflow YML from `example-configs/` 
 
 ```bash
 # Ensure target folder exists
-mkdir -p .github/maintenance-actions
+mkdir -p .github/workflow-configs
 
 # Copy and rename the remote file into your local repo
-curl -L https://github.com/hackforla/website/raw/main/maintenance-actions/example-configs/add-update-label-weekly.example.yml \
+curl -L https://github.com/hackforla/website/raw/main/workflow-configs/example-configs/add-update-label-weekly.example.yml \
 -o .github/workflows/add-update-label-weekly.yml
 ```
 See [example-configs/add-update-label-weekly.example.yml](./example-configs/add-update-label-weekly.example.yml) for a complete example.
@@ -106,24 +106,24 @@ Copy and rename the example configuration file from `example-configs/` into your
 
   ```bash
   # Ensure target folder exists
-  mkdir -p .github/maintenance-actions
+  mkdir -p .github/workflow-configs
 
   # Copy and rename the remote file into your local repo
-  curl -L https://github.com/hackforla/website/raw/main/maintenance-actions/example-configs/add-update-label-weekly-config.example.yml \
-  -o .github/maintenance-actions/add-update-label-weekly-config.yml
+  curl -L https://github.com/hackforla/website/raw/main/workflow-configs/example-configs/add-update-label-weekly-config.example.yml \
+  -o .github/workflow-configs/add-update-label-weekly-config.yml
   ```
 See [example-configs/add-update-label-config.example.yml](./example-configs/add-update-label-config.example.yml) for a complete example.
 #### Step 3: Copy Label Directory 
-Copy and rename the example label directory file from `example-configs/` into your repo, then customize `.github/maintenance-actions/label-directory.yml` to match the labels you are using in your project.
+Copy and rename the example label directory file from `example-configs/` into your repo, then customize `.github/workflow-configs/label-directory.yml` to match the labels you are using in your project.
 
 
 ```bash
 # Ensure target folder exists
-mkdir -p .github/maintenance-actions
+mkdir -p .github/workflow-configs
 
 # Only if this file does not exist, copy to your local repo and rename 
-[ -f .github/maintenance-actions/label-directory.yml ] && echo "File already exists" || curl -L https://github.com/hackforla/website/raw/main/maintenance-actions/example-configs/label-directory.example.yml \
--o .github/maintenance-actions/label-directory.yml
+[ -f .github/workflow-configs/label-directory.yml ] && echo "File already exists" || curl -L https://github.com/hackforla/website/raw/main/workflow-configs/example-configs/label-directory.example.yml \
+-o .github/workflow-configs/label-directory.yml
 ```
 Correlate the 'labelKey' values to the 'Label Names' that are applicable to your project in the format: 
 ```yml
@@ -134,7 +134,7 @@ labels:
   ...
 ```
 
-If you do not include the values in `.github/maintenance-actions/label-directory.yml`, the default values shown in `.github/maintenance-actions/add-update-label-weekly-config.yml` will apply. For this workflow, the default values are: 
+If you do not include the values in `.github/workflow-configs/label-directory.yml`, the default values shown in `.github/workflow-configs/add-update-label-weekly-config.yml` will apply. For this workflow, the default values are: 
 
 ```yml
   # Required by the workflow:
@@ -154,7 +154,7 @@ If you do not include the values in `.github/maintenance-actions/label-directory
 Set the path in your config:
 
 ```bash
-labelDirectoryPath: ".github/maintenance-actions/label-directory.yml"
+labelDirectoryPath: ".github/workflow-configs/label-directory.yml"
 ```
 See [example-configs/label-directory.example.yml](./example-configs/label-directory.example.example.yml) for a complete example.
 
@@ -175,7 +175,7 @@ Add it to the secret (default is `PROJECT_GRAPHQL_TOKEN`) to use in the workflow
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
 | `github-token` | Token with 'repo (full)' and 'project (full)' scopes | Yes | - |
-| `config-path` | Path to config YAML in your repo | No | `.github/maintenance-actions/`<br>`add-update-label-weekly-config.yml` |
+| `config-path` | Path to config YAML in your repo | No | `.github/workflow-configs/`<br>`add-update-label-weekly-config.yml` |
 | `updated-by-days` | Override: days for "current" threshold | No | From config |
 | `comment-by-days` | Override: days for first notice | No | From config |
 | `inactive-by-days` | Override: days for second notice | No | From config |

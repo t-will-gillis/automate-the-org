@@ -1,6 +1,16 @@
 # Configuration for "Add Update Label Weekly" action
-# Copy this file to your project: `.github/maintenance-actions/add-update-label-weekly-config.yml`
-# Customize the values below for your project's needs
+# Copy this file to your project: `.github/workflow-configs/add-update-label-weekly-config.yml`
+#
+# ==============================================================================
+# IMPORTANT NOTES
+# ==============================================================================
+#
+#   1. The configuration options are given as "key: value" pairs.
+#       a. Do not edit any "keys" as this may break the automation.
+#       b. Customize the "values" below for your project's needs.
+#   2. The default values will apply if not edited.
+#   3. Text values must match the EXACT text used in your project repo.
+#
 
 
 
@@ -8,107 +18,96 @@
 # Time thresholds (in days)
 # ==============================================================================
 timeframes:
-  
-  updatedByDays: 3     # Issues updated within this many days are considered current
-  commentByDays: 7    # Issues not updated for this many days are prompted for an update
-  inactiveByDays: 14    # Issues not updated for this many days are marked as inactive
 
-  # To reduce issue clutter, a GraphQL mutation iterates through the bot's previous 
-  # comments and minimizes( hides) repetitions by default. In order to avoid GitHub's 
-  # rate limiting on GraphQL mutations, bot comments older than the `upperLimitDays` 
-  # are not minimized - this should have happened during previous runs.
-  upperLimitDays: 35   
+  updatedByDays: 3     # Issues updated within this many days are considered current
+  commentByDays: 7     # Issues not updated for this many days are prompted for update
+  inactiveByDays: 14   # Issues not updated for this many days are marked as inactive
+
+  upperLimitDays: 35   # See explanation following and "Bot configuration" below
+  # To reduce issue clutter, this workflow includes a GraphQL mutation that iterates 
+  # through and minimizes previous bot comments. To avoid GitHub's rate limiting 
+  # on GraphQL mutations, bot comments older than the `upperLimitDays` are not 
+  # minimized. A low value results in no bot comments minimized, and a high value 
+  # results in all bot comments minimized.
+
 
 
 # ==============================================================================
-# Project board configuration
+# Project Board status-column configuration
 # ==============================================================================
 projectBoard:
-  # Issues with this Project Board status are included in the automation that checks 
-  # whether assiginees are updating their issues.  
-  # CUSTOMIZE this to match your Project Board's equivalent, and EXACT, status.
-  targetStatus: "In progress (actively working)"
-  questionsStatus: "Questions / In Review"
-  
-  # Optional: GraphQL node IDs for your project board (for future use)
-  # projectBoardIds:
-  #   projectNodeId: "PVT_kwDOABcD..."
-  #   statusFieldId: "PVTSSF_lADO..."
+  # The values in this section must match your EXACT Project Board status-column.
+
+  targetStatus: "In progress (actively working)"   # Status-column to include.
+  # Only issues status-column are included in the automation to check whether
+  # assignees are updating their issues. 
+
+  questionsStatus: "Questions / In Review"         # Used with the message template.
+  # The bot's message instructs issue assignees needing help to move their issue to
+  # this status-column. Issues in this status-column are NOT checked by the automation.
 
 
 
 # ==============================================================================
 # Label Directory
 # ==============================================================================
-# This workflow uses issue labels to:
+
+# The automation reviews which labels have been applied to the included issues, to:
 #   1. Flag issues that need updates from the assignee, and
 #   2. Ignore issues that do not need to be checked.
 #
-# The workflow relies on 'label keys' to identify the purpose of each label. These
-# 'label keys' correspond to the actual 'label names' (i.e. `Complexity: Medium`, 
-# `role: front end`, etc.) for the label. The `label-directory.yml` file defines 
-# the key-value pair mapping between 'label keys' and 'Label Name' values:
-# 
-#   labelKey1: "Label Name 1"
-#   labelKey2: "Label Name 2"
+# The workflow relies on the label "keys" to identify the purpose of each label 
+# which correspond to the actual label name "values" used by your repo.
 #
-# The path to your project's label directory file (relative to the project root) 
-# is defined below. The workflow uses this file to correlate label keys with 
-# the actual labels in your repository.
+#   NOTE: Since different workflows use many of the same label names, label name 
+#   values are mapped in your project's label directory yml file- not here.
+#   The path to your label directory is:
 
-labelDirectoryPath: ".github/maintenance-actions/label-directory.yml"
-
-# The 'label keys' are used internally and should not be changed. Since, however, 
-# each project might name issue labels differently, this workflow allows you to 
-# customize the 'label name' values to match your project's actual issue labels.
-# Note especially the next section. 
+labelDirectoryPath: ".github/workflow-configs/label-directory.yml"   # Do not change
 
 
 
 # ==============================================================================
-# Labels used by this workflow
+# Label keys used by this workflow
 # ==============================================================================
- 
+
+# The label "keys" shown here are used internally by the workflow.
+
 labels:
-  # Required labels
-  #
-  # The following 'label keys' must be mapped to your project's actual 'label names' 
-  # via the `label-directory.yml` file. These labels are used by the workflow to 
-  # identify issues needing updates and to apply appropriate labels.
-
   required:
-    - statusUpdated
-    - statusInactive1
-    - statusInactive2
-    - statusHelpWanted
+    # Required label keys: DO NOT REMOVE, confirm "values" in the label-directory
+      # The following label "keys" must be mapped to your project's actual label names 
+      # "values" via the `label-directory.yml` file. The workflow using these labels 
+      # to flag which issues need updates.
+    - statusUpdated                # Map in the `label-directory.yml` file
+    - statusInactive1              # Map in the `label-directory.yml` file
+    - statusInactive2              # Map in the `label-directory.yml` file
 
-  # Ignored labels - optional
-  #
-  # The following labels are optional. The automation will ignore any 
-  # issues with a label name corresponding with the label keys shown here.
-  # For example, if an issue has the "Draft" label, it will be ignored on the
-  # update check.
-  #
-  # You may add or remove label keys to this list as needed.
+    # Secondary key, used by message template
+    - statusHelpWanted             # Map in the `label-directory.yml` file
 
   ignored:
-    - draft
-    - er
-    - epic
-    - dependency
-    - complexity0
+    # Issues with these labels are ignored by the automation.
+      # You may add or remove label "keys" to this list as desired- but be sure
+      # to map the added "key: value" pair in your label-directory.yml file.
+    - draft                        # Map in the `label-directory.yml` file
+    - er                           # Map in the `label-directory.yml` file
+    - epic                         # Map in the `label-directory.yml` file
+    - dependency                   # Map in the `label-directory.yml` file
+    - complexity0                  # Map in the `label-directory.yml` file
 
 
 
 # ==============================================================================
-# Bot configuration
+# Bot configuration- If needed
 # ==============================================================================
-# Bot usernames whose comments should be minimized when they become outdated
+# Relevant to "timeframes.upperLimitDays" setting above.
+# Bot usernames whose comments should be minimized when they become outdated.
 # Comments are minimized if they're between 'commentByDays' and 'upperLimitDays' old
 bots:
   - "github-actions[bot]"
   - "HackforLABot"
-  # As needed, add any additional bot usernames here
+  # Only if needed, add any additional bot usernames here
 
 
 
@@ -125,28 +124,32 @@ bots:
 #   ${teamSlackChannel}   - The name of your team's Slack Channel
 #   ${cutoffTime}         - The formatted timestamp of the issue's last update
 #
-# You can use Markdown formatting to edit this template
+# You can use Markdown formatting to edit the template found at:
 
-teamSlackChannel: "#hfla-site"
+botCommentTemplatePath: ".github/workflow-configs/templates/add-update-instructions-template.md"   # Do not change
 
-commentTemplate: |
-  Hello ${assignees}!
+# commentTemplate: |
+#   Hello ${assignees}!
   
-  Please add an update comment using the below template (even if you have a pull request). Afterwards, remove the `${label}` label and add the `${statusUpdated}` label.
+#   Please add an update comment using the below template (even if you have a pull request). Afterwards, remove 
+#   the `${label}` label and add the `${statusUpdated}` label.
 
-  1. Progress: "What is the current status of your issue? What have you completed and what is left to do?"
-  2. Blockers: "Explain any difficulties or errors encountered."
-  3. Availability: "How much time will you have this week to work on this issue?"
-  4. ETA: "When do you expect this issue to be completed?"
-  5. Pictures (optional): "Add any pictures of the visual changes made to the site so far."
+#   1. Progress: "What is the current status of your issue? What have you completed and what is left to do?"
+#   2. Blockers: "Explain any difficulties or errors encountered."
+#   3. Availability: "How much time will you have this week to work on this issue?"
+#   4. ETA: "When do you expect this issue to be completed?"
+#   5. Pictures (optional): "Add any pictures of the visual changes made to the site so far."
 
-  If you need help, be sure to either: 1) place your issue in the "${questionsStatus}" status column of the Project Board and ask for help at your next meeting; 2) put a `${statusHelpWanted}` label on your issue and pull request; or 3) put up a request for assistance on the team's ${teamSlackChannel} Slack channel.
+#   If you need help, be sure to either: 1) place your issue in the "${questionsStatus}" status column of the 
+#   Project Board and ask for help at your next meeting; 2) put a `${statusHelpWanted}` label on your issue 
+#   and pull request; or 3) put up a request for assistance on the team's <teamSlackChannel> Slack channel.
 
-  Please note that including your questions in the issue comments- along with screenshots, if applicable- will help us to help you. [Here](https://github.com/hackforla/website/issues/1619#issuecomment-897315561) and [here](https://github.com/hackforla/website/issues/1908#issuecomment-877908152) are examples of well-formed questions.
+#   Please note that including your questions in the issue comments- along with screenshots, if applicable- 
+#   will help us to help you. [Here](https://github.com/hackforla/website/issues/1619#issuecomment-897315561) and [here](https://github.com/hackforla/website/issues/1908#issuecomment-877908152) are examples of well-formed questions.
 
-  <sub>You are receiving this comment because your last comment was before ${cutoffTime}.</sub>
+#   <sub>You are receiving this comment because your last comment was before ${cutoffTime}.</sub>
   
-  Thanks for being part of HfLA!
+#   Thanks for being part of HfLA!
 
 
 
