@@ -36,9 +36,10 @@ const logger = {
   },
 
   // Errors: annotated in GitHub Actions logs
-  error: (msg) => {
-    console.error(`${colors.red}[ERROR]${colors.reset} ${msg}`);
-    console.log(`::error::${msg}`);
+  error: (msg, err = "") => {
+    const details = err instanceof Error ? err.stack : err;
+    console.error(`${colors.red}[ERROR]${colors.reset} ${msg}${details ? `, ${details}` : ""}`);
+    console.log(`::error::${msg}${details ? `, ${details}` : ""}`);
   },
 
   // Diagnostic detail; for dry-run/debug or verbose mode
