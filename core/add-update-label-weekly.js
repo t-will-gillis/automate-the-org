@@ -369,9 +369,8 @@ function formatComment(assignees, labelString) {
     .replace(/\$\{assignees\}/g, assignees)
     .replace(/\$\{label\}/g, labelString)
     .replace(/\$\{statusUpdated\}/g, labels.statusUpdated || 'Status: Updated')
-    .replace(/\$\{questionsStatus\}/g, projectBoard.questionsStatus || 'Questions / In Review')
+    .replace(/\$\{questionsStatus\}/g, config.projectBoard.questionsStatus || 'Questions / In Review')
     .replace(/\$\{statusHelpWanted\}/g, labels.statusHelpWanted || 'Status: Help Wanted')
-    .replace(/\$\{teamSlackChannel\}/g, teamSlackChannel || '#hfla-site')
     .replace(/\$\{cutoffTime\}/g, cutoffTimeString);
 
   return completedInstructions;
