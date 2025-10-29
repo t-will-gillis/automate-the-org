@@ -305,7 +305,8 @@ async function postComment(issueNum, assignees, labelString) {
     });
     logger.info(`Update request comment has been posted to issue #${issueNum}`);
   } catch (err) {
-    logger.error(`Function failed to post comment to issue #${issueNum}. Please refer to the error below: \n `, err);
+    logger.error(`Function failed to post comment to issue #${issueNum}. Error: ${err?.stack || err}`);
+
   }
 }
 
@@ -34519,9 +34520,10 @@ const logger = {
   },
 
   // Errors: annotated in GitHub Actions logs
-  error: (msg) => {
-    console.error(`${colors.red}[ERROR]${colors.reset} ${msg}`);
-    console.log(`::error::${msg}`);
+  error: (msg, err = "") => {
+    const details = err instanceof Error ? err.stack : err;
+    console.error(`${colors.red}[ERROR]${colors.reset} ${msg}${details ? `, ${details}` : ""}`);
+    console.log(`::error::${msg}${details ? `, ${details}` : ""}`);
   },
 
   // Diagnostic detail; for dry-run/debug or verbose mode
