@@ -361,6 +361,7 @@ function createAssigneeString(assignees) {
   return assigneeString.join(', ');
 }
 
+// Populate default comment template with corresponding values
 function formatComment(assignees, labelString) {
   const options = {
     dateStyle: 'full',
@@ -371,11 +372,13 @@ function formatComment(assignees, labelString) {
   
   let completedInstructions = config.commentTemplate
     .replace(/\$\{assignees\}/g, assignees)
-    .replace(/\$\{cutoffTime\}/g, cutoffTimeString)
     .replace(/\$\{label\}/g, labelString)
     .replace(/\$\{statusUpdated\}/g, labels.statusUpdated || 'Status: Updated')
-    .replace(/\$\{statusHelpWanted\}/g, labels.statusHelpWanted || 'Status: Help Wanted');
-  
+    .replace(/\$\{questionsStatus\}/g, projectBoard.questionsStatus || 'Questions / In Review')
+    .replace(/\$\{statusHelpWanted\}/g, labels.statusHelpWanted || 'Status: Help Wanted')
+    .replace(/\$\{teamSlackChannel\}/g, teamSlackChannel || '#hfla-site')
+    .replace(/\$\{cutoffTime\}/g, cutoffTimeString);
+
   return completedInstructions;
 }
 
@@ -383,12 +386,14 @@ function isCommentByBot(data) {
   // Use bot list from config, default to 'github-actions[bot]'
   const botLogins = config.bots || ['github-actions[bot]'];
   
+  // NOTE: this should not apply if Skills Issues omitted from the scans
   // If the comment includes the MARKER, return false so it is not minimized
   let MARKER = '<!-- Skills Issue Activity Record -->'; 
   if (data.body && data.body.includes(MARKER)) {
     logger.info(`Found "Skills Issue Activity Record" - do not minimize`);
     return false; 
   }
+
   return botLogins.includes(data.actor.login);
 }
 
@@ -36857,7 +36862,7 @@ async function run() {
     
     // Get action inputs
     const token = core.getInput('github-token', { required: true });
-    const configPath = core.getInput('config-path') || '.github/workflow-configs/add-update-label-config.yml';
+    const configPath = core.getInput('config-path') || '.github/workflow-configs/add-update-label-weekly-config.yml';
     const dryRunInput = core.getInput('dry-run') || 'false';
     const dryRun = (dryRunInput).toLowerCase() === 'true';
     dryRun && logger.warn(`Running in DRY-RUN mode: No changes will be applied`);
@@ -36925,7 +36930,6 @@ async function run() {
     
     // Execute the workflow
     logger.step(`Running Add Update Label Weekly workflow...`);
-    logger.log(``);
     
     await addUpdateLabelWeekly({
       github: octokit,
@@ -36975,7 +36979,6 @@ function getDefaultConfigs() {
         'er',
         'epic',
         'dependency',
-        'skillsIssueCompleted',
         'complexity0'
       ],
     },
@@ -36985,8 +36988,6 @@ function getDefaultConfigs() {
       'HackforLABot',
     ],
 
-    teamSlackChannel: '#hfla-site',
-    
     timezone: 'America/Los_Angeles',
     
     commentTemplate: getDefaultCommentTemplate(),
@@ -36996,13 +36997,14 @@ function getDefaultConfigs() {
 }
 
 /**
- * Returns the default comment template
+ * Returns the default comment template if not provided
  * @returns {string} Comment template with placeholders
  */
 function getDefaultCommentTemplate() {
   return `Hello \${assignees}!
   
-Please add an update comment using the below template (even if you have a pull request). Afterwards, remove the \`\${label}\` label and add the \`\${statusUpdated}\` label.
+Please add an update comment using the below template (even if you have a pull request). Afterwards, remove 
+the \`\${label}\` label and add the \`\${statusUpdated}\` label.
 
 1. Progress: "What is the current status of your issue? What have you completed and what is left to do?"
 2. Blockers: "Explain any difficulties or errors encountered."
@@ -37010,13 +37012,16 @@ Please add an update comment using the below template (even if you have a pull r
 4. ETA: "When do you expect this issue to be completed?"
 5. Pictures (optional): "Add any pictures of the visual changes made to the site so far."
 
-If you need help, be sure to either: 1) place your issue in the \${questionsStatus} status column of the Project Board and ask for help at your next meeting; 2) put a \`\${statusHelpWanted}\` label on your issue and pull request; or 3) put up a request for assistance on the team's \${teamSlackChannel} Slack channel.  
+If you need help, be sure to either: 1) place your issue in the "\${questionsStatus}" status column of the 
+Project Board and ask for help at your next meeting; 2) put a \`\${statusHelpWanted}\` label on your issue 
+and pull request; or 3) put up a request for assistance on the team's <teamSlackChannel> Slack channel.  
 
-Please note that including your questions in the issue comments- along with screenshots, if applicable- will help us to help you. [Here](https://github.com/hackforla/website/issues/1619#issuecomment-897315561) and [here](https://github.com/hackforla/website/issues/1908#issuecomment-877908152) are examples of well-formed questions.
+Please note that including your questions in the issue comments- along with screenshots, if applicable- 
+will help us to help you. [Here](https://github.com/hackforla/website/issues/1619#issuecomment-897315561) and [here](https://github.com/hackforla/website/issues/1908#issuecomment-877908152) are examples of well-formed questions.
 
-<sub>You are receiving this comment because your last comment was before \${cutoffTime}.</sub>
+Thanks for being part of HfLA!
 
-Thanks for being part of HfLA!`;
+<sub>You are receiving this comment because your last comment was before \${cutoffTime}.</sub>`;
 }
 
 // Run the action
