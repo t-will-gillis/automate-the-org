@@ -135,7 +135,6 @@ function getDefaultConfigs() {
         'er',
         'epic',
         'dependency',
-        'skillsIssueCompleted',
         'complexity0'
       ],
     },
@@ -145,8 +144,6 @@ function getDefaultConfigs() {
       'HackforLABot',
     ],
 
-    teamSlackChannel: '#hfla-site',
-    
     timezone: 'America/Los_Angeles',
     
     commentTemplate: getDefaultCommentTemplate(),
@@ -156,13 +153,14 @@ function getDefaultConfigs() {
 }
 
 /**
- * Returns the default comment template
+ * Returns the default comment template if not provided
  * @returns {string} Comment template with placeholders
  */
 function getDefaultCommentTemplate() {
   return `Hello \${assignees}!
   
-Please add an update comment using the below template (even if you have a pull request). Afterwards, remove the \`\${label}\` label and add the \`\${statusUpdated}\` label.
+Please add an update comment using the below template (even if you have a pull request). Afterwards, remove 
+the \`\${label}\` label and add the \`\${statusUpdated}\` label.
 
 1. Progress: "What is the current status of your issue? What have you completed and what is left to do?"
 2. Blockers: "Explain any difficulties or errors encountered."
@@ -170,13 +168,16 @@ Please add an update comment using the below template (even if you have a pull r
 4. ETA: "When do you expect this issue to be completed?"
 5. Pictures (optional): "Add any pictures of the visual changes made to the site so far."
 
-If you need help, be sure to either: 1) place your issue in the "\${questionsStatus}" status column of the Project Board and ask for help at your next meeting; 2) put a \`\${statusHelpWanted}\` label on your issue and pull request; or 3) put up a request for assistance on the team's \${teamSlackChannel} Slack channel.  
+If you need help, be sure to either: 1) place your issue in the "\${questionsStatus}" status column of the 
+Project Board and ask for help at your next meeting; 2) put a \`\${statusHelpWanted}\` label on your issue 
+and pull request; or 3) put up a request for assistance on the team's <teamSlackChannel> Slack channel.  
 
-Please note that including your questions in the issue comments- along with screenshots, if applicable- will help us to help you. [Here](https://github.com/hackforla/website/issues/1619#issuecomment-897315561) and [here](https://github.com/hackforla/website/issues/1908#issuecomment-877908152) are examples of well-formed questions.
+Please note that including your questions in the issue comments- along with screenshots, if applicable- 
+will help us to help you. [Here](https://github.com/hackforla/website/issues/1619#issuecomment-897315561) and [here](https://github.com/hackforla/website/issues/1908#issuecomment-877908152) are examples of well-formed questions.
 
-<sub>You are receiving this comment because your last comment was before \${cutoffTime}.</sub>
+Thanks for being part of HfLA!
 
-Thanks for being part of HfLA!`;
+<sub>You are receiving this comment because your last comment was before \${cutoffTime}.</sub>`;
 }
 
 // Run the action

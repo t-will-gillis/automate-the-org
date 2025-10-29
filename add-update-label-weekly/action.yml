@@ -13,7 +13,7 @@ inputs:
   dry-run:
     description: 'Run in dry-run mode without posting comments or updating issues'
     required: true
-    default: 'False'
+    default: 'true'
 
 runs:
   using: 'node20'
