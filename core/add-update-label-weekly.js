@@ -3,6 +3,7 @@ const { logger } = require('../shared/format-log-messages');
 const queryIssueInfo = require('../shared/query-issue-info');
 const findLinkedIssue = require('../shared/find-linked-issue');
 const getIssueTimeline = require('../shared/get-issue-timeline');
+const { addLabels, removeLabels } = require('../shared/manage-issue-labels');
 const minimizeIssueComment = require('../shared/hide-issue-comment');
 
 // Global variables
@@ -68,17 +69,17 @@ async function main({ github: g, context: c, labels: l, config: cfg }) {
     const responseObject = await isTimelineOutdated(timeline, issueNum, assignees);
 
     if (responseObject.result === true && responseObject.labels === labels.statusInactive1) {   // 7-day outdated: add to be updated label, remove others
-      await removeLabels(issueNum, labels.statusUpdated, labels.statusInactive2);
-      await addLabels(issueNum, responseObject.labels);
+      await removeLabels(github, context, config, issueNum, labels.statusUpdated, labels.statusInactive2);
+      await addLabels(github, context, config, issueNum, responseObject.labels);
       await postComment(issueNum, assignees, labels.statusInactive1);
     } else if (responseObject.result === true && responseObject.labels === labels.statusInactive2) {   // 14-day outdated: add inactive label, remove others
-      await removeLabels(issueNum, labels.statusInactive1, labels.statusUpdated);
-      await addLabels(issueNum, responseObject.labels);
+      await removeLabels(github, context, config, issueNum, labels.statusInactive1, labels.statusUpdated);
+      await addLabels(github, context, config, issueNum, responseObject.labels);
       await postComment(issueNum, assignees, labels.statusInactive2);
     } else if (responseObject.result === false && responseObject.labels === labels.statusUpdated) {   // Updated within 3 days: retain up-to-date label if there is one
-      await removeLabels(issueNum, labels.statusInactive1, labels.statusInactive2);
+      await removeLabels(github, context, config, issueNum, labels.statusInactive1, labels.statusInactive2);
     } else if (responseObject.result === false && responseObject.labels === '') {   // Updated between 3 and 7 days, or recently assigned, or fixed by a PR by assignee, remove all three update-related labels
-      await removeLabels(issueNum, labels.statusInactive1, labels.statusInactive2, labels.statusUpdated);
+      await removeLabels(github, context, config, issueNum, labels.statusInactive1, labels.statusInactive2, labels.statusUpdated);
     }
   }
 }
