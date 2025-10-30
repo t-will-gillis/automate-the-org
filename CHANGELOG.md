@@ -18,9 +18,7 @@ _No unreleased changes yet._
 
 ## v0.1.6
 2025-10-29
-
 - edits to logger.error
-
 
 ## v0.1.5
 2025-10-29
