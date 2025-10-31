@@ -13,6 +13,10 @@ var labels;
 var config;
 
 // Time cutoff variables (set in main function based on config)
+var updatedByDays;
+var commentByDays;
+var inactiveByDays;
+var upperLimitDays;
 var updatedCutoffTime;
 var toUpdateCutoffTime;
 var inactiveCutoffTime;
@@ -38,10 +42,10 @@ async function main({ github: g, context: c, labels: l, config: cfg }) {
   config = cfg;
 
   // Calculate cutoff times from config settings
-  const updatedByDays = config.timeframes.updatedByDays;
-  const commentByDays = config.timeframes.commentByDays;
-  const inactiveByDays = config.timeframes.inactiveByDays;
-  const upperLimitDays = config.timeframes.upperLimitDays;
+  updatedByDays = config.timeframes.updatedByDays;
+  commentByDays = config.timeframes.commentByDays;
+  inactiveByDays = config.timeframes.inactiveByDays;
+  upperLimitDays = config.timeframes.upperLimitDays;
 
   // Set global cutoff time vars from config settings, adding/subtracting 10 mins to avoid edge cases
   const msPerMinute = 60 * 1000;
