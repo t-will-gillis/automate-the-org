@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs: Troubleshooting guide
 
 ## [Unreleased]
-_No unreleased changes yet._
+- Substantial refactoring of `add-update-label-weekly.js`
 
 ## v0.1.6
 2025-10-29

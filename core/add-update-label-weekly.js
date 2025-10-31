@@ -43,42 +43,34 @@ async function main({ github: g, context: c, labels: l, config: cfg }) {
   const inactiveByDays = config.timeframes.inactiveByDays;
   const upperLimitDays = config.timeframes.upperLimitDays;
 
-  // Set global cutoff time vars, adding/subtracting 10 mins to avoid edge cases
-  updatedCutoffTime = new Date();
-  updatedCutoffTime.setDate(updatedCutoffTime.getDate() - updatedByDays);
-  
-  toUpdateCutoffTime = new Date();
-  toUpdateCutoffTime.setDate(toUpdateCutoffTime.getDate() - commentByDays);
-  toUpdateCutoffTime.setMinutes(toUpdateCutoffTime.getMinutes() - 10);
-  
-  inactiveCutoffTime = new Date();
-  inactiveCutoffTime.setDate(inactiveCutoffTime.getDate() - inactiveByDays);
-  
-  upperLimitCutoffTime = new Date();
-  upperLimitCutoffTime.setDate(upperLimitCutoffTime.getDate() - upperLimitDays);
-  upperLimitCutoffTime.setMinutes(upperLimitCutoffTime.getMinutes() + 10);
+  // Set global cutoff time vars from config settings, adding/subtracting 10 mins to avoid edge cases
+  const msPerMinute = 60 * 1000;
+  updatedCutoffTime = new Date(Date.now() - updatedByDays * 24 * 60 * msPerMinute);
+  toUpdateCutoffTime = new Date(Date.now() - (commentByDays * 24 * 60 + 10) * msPerMinute);
+  inactiveCutoffTime = new Date(Date.now() - inactiveByDays * 24 * 60 * msPerMinute);
+  upperLimitCutoffTime = new Date(Date.now() - (upperLimitDays * 24 * 60 - 10) * msPerMinute);
 
   // Retrieve all issue numbers from a repo
   const issueNums = await getIssueNumsFromRepo();
 
-  for await (let issueNum of issueNums) {
+  for (let issueNum of issueNums) {
     const timeline = await getIssueTimeline(github, context, issueNum);
     const assignees = await getAssignees(issueNum);
 
     // Add and remove labels as well as post comment if the issue's timeline indicates the issue is inactive, to be updated or up-to-date accordingly
     const responseObject = await isTimelineOutdated(timeline, issueNum, assignees);
 
-    if (responseObject.result === true && responseObject.labels === labels.statusInactive1) {   // 7-day outdated: add to be updated label, remove others
+    if (responseObject.result === true && responseObject.labels === labels.statusInactive1) {
       await removeLabels(github, context, config, issueNum, labels.statusUpdated, labels.statusInactive2);
       await addLabels(github, context, config, issueNum, responseObject.labels);
-      await postComment(issueNum, assignees, labels.statusInactive1);
-    } else if (responseObject.result === true && responseObject.labels === labels.statusInactive2) {   // 14-day outdated: add inactive label, remove others
+      await postComment(issueNum, assignees, labels.statusInactive1, responseObject.cutoff);
+    } else if (responseObject.result === true && responseObject.labels === labels.statusInactive2) {
       await removeLabels(github, context, config, issueNum, labels.statusInactive1, labels.statusUpdated);
       await addLabels(github, context, config, issueNum, responseObject.labels);
-      await postComment(issueNum, assignees, labels.statusInactive2);
-    } else if (responseObject.result === false && responseObject.labels === labels.statusUpdated) {   // Updated within 3 days: retain up-to-date label if there is one
+      await postComment(issueNum, assignees, labels.statusInactive2, responseObject.cutoff);
+    } else if (responseObject.result === false && responseObject.labels === labels.statusUpdated) {
       await removeLabels(github, context, config, issueNum, labels.statusInactive1, labels.statusInactive2);
-    } else if (responseObject.result === false && responseObject.labels === '') {   // Updated between 3 and 7 days, or recently assigned, or fixed by a PR by assignee, remove all three update-related labels
+    } else if (responseObject.result === false && responseObject.labels === '') {
       await removeLabels(github, context, config, issueNum, labels.statusInactive1, labels.statusInactive2, labels.statusUpdated);
     }
   }
@@ -142,10 +134,10 @@ async function getIssueNumsFromRepo() {
  * Assesses whether the timeline is outdated.
  * @param {Array} timeline      - a list of events in the timeline of an issue, retrieved from the issues API
  * @param {Number} issueNum     - the issue's number
- * @param {String} assignees    - a list of the issue's assignee's username
+ * @param {String} assignees    - a list of the issue's assignee's username (array of `login`'s)
  * @returns true if timeline indicates the issue is outdated/inactive, false if not; also returns appropriate labels that should be retained or added to the issue
  */
-function isTimelineOutdated(timeline, issueNum, assignees) { // assignees is an arrays of `login`'s
+function isTimelineOutdated(timeline, issueNum, assignees) {
   let lastAssignedTimestamp = null;
   let lastCommentTimestamp = null;
   let commentsToBeMinimized = [];
@@ -153,87 +145,83 @@ function isTimelineOutdated(timeline, issueNum, assignees) { // assignees is an 
   for (let i = timeline.length - 1; i >= 0; i--) {
     let eventObj = timeline[i];
     let eventType = eventObj.event;
-    // isLinkedIssue checks if the 'body'(comment) of the event mentions fixes/resolves/closes this current issue
-    let isOpenLinkedPullRequest = eventType === 'cross-referenced' && isLinkedIssue(eventObj, issueNum) && eventObj.source.issue.state === 'open';
 
-    // if cross-referenced and fixed/resolved/closed by assignee and the pull
-    // request is open, remove all update-related labels
-    // Once a PR is opened, we remove labels because we focus on the PR not the issue.
-    if (isOpenLinkedPullRequest && assignees.includes(eventObj.actor.login)) {
-      logger.info(`Issue #${issueNum}: Assignee fixes/resolves/closes issue with an open pull request, remove all update-related labels`);
-      return { result: false, labels: '' };  // remove all three labels
+    // If cross-referenced and fixed/resolved/closed by assignee and the pull request is open, remove all 
+    // update-related labels. (Once a PR is opened, remove all labels because we focus on the PR, not the issue.)
+    // If the linked PR is closed, continue through the rest of the conditions to receive the appropriate label.
+    if (eventType === 'cross-referenced' && isLinkedIssue(eventObj, issueNum)) {
+      const issueState = eventObj.source?.issue?.state;
+      const isPR = eventObj.source?.issue?.pull_request;
+   
+      if (issueState === 'open' && assignees.includes(eventObj.actor.login)) {
+        logger.info(`Issue #${issueNum}: Assignee fixes/resolves/closes issue with an open pull request, remove all update-related labels`);
+        return { result: false, labels: '' };
+      }
+      if (issueState === 'closed' && isPR ) {
+        logger.info(`Issue #${issueNum}: Linked pull request has been closed, continue with checks`);
+      }
     }
 
-    // If the event is a linked PR and the PR is closed, it will continue through the
-    // rest of the conditions to receive the appropriate label.
-    else if(
-      eventType === 'cross-referenced' && 
-      eventObj.source?.issue?.pull_request &&
-      eventObj.source.issue.state === 'closed'
-    ) {
-      logger.info(`Issue #${issueNum}: Linked pull request has been closed.`);
-    }
+    const eventTimestamp = eventObj.updated_at || eventObj.created_at;
 
-    let eventTimestamp = eventObj.updated_at || eventObj.created_at;
-
-    // update the lastCommentTimestamp if this is the last (most recent) comment by an assignee
-    if (!lastCommentTimestamp && eventType === 'commented' && isCommentByAssignees(eventObj, assignees)) {
+    // Update for the most recent 'lastCommentTimestamp' or 'lastAssignedTimestamp' 
+    if (!lastCommentTimestamp && eventType === 'commented' && assignees.includes(eventObj.actor.login)) {
       lastCommentTimestamp = eventTimestamp;
-    }
-
-    // update the lastAssignedTimestamp if this is the last (most recent) time an assignee was assigned to the issue
-    else if (!lastAssignedTimestamp && eventType === 'assigned' && assignees.includes(eventObj.assignee.login)) {
+    } else if (!lastAssignedTimestamp && eventType === 'assigned' && assignees.includes(eventObj.assignee.login)) {
       lastAssignedTimestamp = eventTimestamp;
     }
 
-    // If this event is more than 7 days old but less than the upperLimitCutoffTime AND this event is a comment by the GitHub Actions Bot, then hide the comment as outdated.
-    if (isMomentRecent(eventObj.created_at, upperLimitCutoffTime) && !isMomentRecent(eventObj.created_at, toUpdateCutoffTime) && eventType === 'commented' && isCommentByBot(eventObj)) { 
-      logger.info(`Comment ${eventObj.node_id} is outdated (i.e. > 7 days old) and will be minimized.`);
-      commentsToBeMinimized.push(eventObj.node_id); // retain node id so its associated comment can be minimized later
+    // If this event is older than 'toUpdateCutoffTime', less than the 'upperLimitCutoffTime', AND this event is a comment by the GitHub Actions Bot, then add comment's 'node_id' to list of outdated comments to minimize later.
+    if (
+      isMomentRecent(eventObj.created_at, upperLimitCutoffTime) &&
+      !isMomentRecent(eventObj.created_at, toUpdateCutoffTime) &&
+      eventType === 'commented' &&
+      isCommentByBot(eventObj)
+    ) { 
+      logger.info(`Issue #${issueNum}: Comment ${eventObj.node_id} is from a previous run and will be minimized.`);
+      commentsToBeMinimized.push(eventObj.node_id);
     }
   }
 
+  // Minimize previous bot comments
   minimizeComments(commentsToBeMinimized);
 
-  if (lastCommentTimestamp && isMomentRecent(lastCommentTimestamp, updatedCutoffTime)) { // if commented by assignee within 3 days
-    logger.info(`Issue #${issueNum}: Commented by assignee within 3 days, retain '${labels.statusUpdated}' label`);
-    return { result: false, labels: labels.statusUpdated } // retain (don't add) updated label, remove the other two
+
+  // Determine the latest activity timestamp and activity type
+  const [ lastActivityTimestamp, lastActivityType ] =
+    lastCommentTimestamp > lastAssignedTimestamp
+    ? [lastCommentTimestamp, 'Assignee\'s last comment']
+    : [lastAssignedTimestamp, 'Assignee\'s assignment'];
+
+  // If 'lastActivityTimestamp' more recent than 'updatedCutoffTime', keep updated label and remove others
+  if (isMomentRecent(lastActivityTimestamp, updatedCutoffTime)) {
+    logger.info(`Issue #${issueNum}: ${lastActivityType} sooner than ${updatedByDays} days ago, retain '${labels.statusUpdated}' label if exists `);
+    return { result: false, labels: labels.statusUpdated, cutoff: updatedCutoffTime }
   }
 
-  if (lastAssignedTimestamp && isMomentRecent(lastAssignedTimestamp, updatedCutoffTime)) { // if an assignee was assigned within 3 days
-    logger.info(`Issue #${issueNum}: Assigned to assignee within 3 days, no update-related labels should be used`);
-    return { result: false, labels: '' } // remove all three labels
+  // If 'lastActivityTimestamp' more recent than 'toUpdateCutoffTime', remove all labels
+  if (isMomentRecent(lastActivityTimestamp, updatedCutoffTime)) {
+    logger.info(`Issue #${issueNum}: ${lastActivityType} between ${updatedByDays} and ${commentByDays} days ago, no update-related labels`)
+    return { result: false, labels: '', cutoff: updatedCutoffTime} 
   }
 
-  if ((lastCommentTimestamp && isMomentRecent(lastCommentTimestamp, toUpdateCutoffTime)) || (lastAssignedTimestamp && isMomentRecent(lastAssignedTimestamp, toUpdateCutoffTime))) { // if updated within 7 days
-    if ((lastCommentTimestamp && isMomentRecent(lastCommentTimestamp, toUpdateCutoffTime))) {
-      logger.info(`Issue #${issueNum}: Commented by assignee between 3 and 7 days, no update-related labels should be used; timestamp: ${lastCommentTimestamp}`)
-    } else if (lastAssignedTimestamp && isMomentRecent(lastAssignedTimestamp, toUpdateCutoffTime)) {
-      logger.info(`Issue #${issueNum}: Assigned between 3 and 7 days, no update-related labels should be used; timestamp: ${lastAssignedTimestamp}`)
-    }
-    return { result: false, labels: '' } // remove all three labels
+  // If 'lastActivityTimestamp' not yet older than the 'inactiveCutoffTime', issue needs update label
+  if (isMomentRecent(lastActivityTimestamp, inactiveCutoffTime)) { 
+    logger.info(`Issue #${issueNum}: ${lastActivityType} between ${commentByDays} and ${inactiveByDays} days ago, use '${labels.statusInactive1}' label`)
+    return { result: true, labels: labels.statusInactive1, cutoff: toUpdateCutoffTime }
   }
 
-  if ((lastCommentTimestamp && isMomentRecent(lastCommentTimestamp, inactiveCutoffTime)) || (lastAssignedTimestamp && isMomentRecent(lastAssignedTimestamp, inactiveCutoffTime))) { // if last comment was between 7-14 days, or no comment but an assginee was assigned during this period, issue is outdated and add needs update label
-    if ((lastCommentTimestamp && isMomentRecent(lastCommentTimestamp, inactiveCutoffTime))) {
-      logger.info(`Issue #${issueNum}: Commented by assignee between 7 and 14 days, use '${labels.statusInactive1}' label; timestamp: ${lastCommentTimestamp}`)
-    } else if (lastAssignedTimestamp && isMomentRecent(lastAssignedTimestamp, inactiveCutoffTime)) {
-      logger.info(`Issue #${issueNum}: Assigned between 7 and 14 days, use '${labels.statusInactive1}' label; timestamp: ${lastAssignedTimestamp}`)
-    }
-    return { result: true, labels: labels.statusInactive1 } // outdated, add needs update label
-  }
-
-  // If no comment or assigning found within 14 days, issue is outdated and add inactive label
-  logger.info(`Issue #${issueNum}: No update within 14 days, use '${labels.statusInactive2}' label`)
-  return { result: true, labels: labels.statusInactive2 }
+  // If 'lastActivityTimestamp' is older than the 'inactiveCutoffTime', issue is outdated and needs inactive label
+  logger.info(`Issue #${issueNum}: ${lastActivityType} older than ${inactiveByDays} days ago, use '${labels.statusInactive2}' label`)
+  return { result: true, labels: labels.statusInactive2, cutoff: inactiveCutoffTime }
 }
 
 
 
-async function postComment(issueNum, assignees, labelString) {
+async function postComment(issueNum, assignees, labelString, cutoffTime) {
   try {
     const assigneeString = createAssigneeString(assignees);
-    const instructions = formatComment(assigneeString, labelString);
+    const instructions = formatComment(assigneeString, labelString, cutoffTime);
 
     if (config.dryRun) {
       logger.debug(`Would post comment to issue #${issueNum}:`);
@@ -247,9 +235,9 @@ async function postComment(issueNum, assignees, labelString) {
       issue_number: issueNum,
       body: instructions,
     });
-    logger.info(`Update request comment has been posted to issue #${issueNum}`);
+    logger.info(`Issue #${issueNum}: Update request comment has been posted`);
   } catch (err) {
-    logger.error(`Function failed to post comment to issue #${issueNum}. Error: ${err?.stack || err}`);
+    logger.error(`Issue #${issueNum}: Function failed to post comment ${err?.stack || err}`);
 
   }
 }
@@ -258,20 +246,11 @@ async function postComment(issueNum, assignees, labelString) {
 *** HELPER FUNCTIONS ***
 ***********************/
 function isMomentRecent(dateString, cutoffTime) {
-  const dateStringObj = new Date(dateString);
-  if (dateStringObj >= cutoffTime) {
-    return true;
-  } else {
-    return false;
-  }
+  return new Date(dateString) >= cutoffTime;
 }
 
 function isLinkedIssue(data, issueNum) {
   return findLinkedIssue(data.source.issue.body) == issueNum
-}
-
-function isCommentByAssignees(data, assignees) {
-  return assignees.includes(data.actor.login);
 }
 
 async function getAssignees(issueNum) {
@@ -285,7 +264,7 @@ async function getAssignees(issueNum) {
     const assigneesLogins = filterForAssigneesLogins(assigneesData);
     return assigneesLogins;
   } catch (err) {
-    logger.error(`Function failed to get assignees from issue #${issueNum}. Please refer to the error below: \n `, err);
+    logger.error(`Issue #${issueNum}: Function failed to get assignees. See: \n `, err);
     return null;
   }
 }
@@ -307,13 +286,13 @@ function createAssigneeString(assignees) {
 }
 
 // Populate default comment template with corresponding values
-function formatComment(assignees, labelString) {
+function formatComment(assignees, labelString, cutoffTime) {
   const options = {
     dateStyle: 'full',
     timeStyle: 'short',
     timeZone: config.timezone || 'America/Los_Angeles',
   };
-  const cutoffTimeString = updatedCutoffTime.toLocaleString('en-US', options);
+  const cutoffTimeString = cutoffTime.toLocaleString('en-US', options);
   
   let completedInstructions = config.commentTemplate
     .replace(/\$\{assignees\}/g, assignees)
@@ -330,7 +309,7 @@ function isCommentByBot(data) {
   // Use bot list from config, default to 'github-actions[bot]'
   const botLogins = config.bots || ['github-actions[bot]'];
   
-  // NOTE: this should not apply if Skills Issues omitted from the scans
+  // NOTE: this should not apply if `Complexity: Prework` omitted from the scans
   // If the comment includes the MARKER, return false so it is not minimized
   let MARKER = '<!-- Skills Issue Activity Record -->'; 
   if (data.body && data.body.includes(MARKER)) {
@@ -341,7 +320,7 @@ function isCommentByBot(data) {
   return botLogins.includes(data.actor.login);
 }
 
-// asynchronously minimize all the comments that are outdated (> 1 week old)
+// asynchronously minimize all the comments that are outdated
 async function minimizeComments(comment_node_ids) {
   for (const node_id of comment_node_ids) {
     if (config.dryRun) {

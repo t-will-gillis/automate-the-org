@@ -23,4 +23,4 @@ will help us to help you. [Here](https://github.com/hackforla/website/issues/161
 
 Thanks for being part of HfLA!  
 
-<sub>You are receiving this comment because your last comment was before ${cutoffTime} PST.</sub>
+<sub>You are receiving this comment because your last update was before ${cutoffTime} PST.</sub>
