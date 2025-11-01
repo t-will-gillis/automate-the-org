@@ -1,6 +1,6 @@
-name: Add Update Label Weekly
-description: Monitors “In Progress” issues for recent updates and posts reminders to assignees who have not provided activity.
-author: Hack for LA
+name: 'Add Update Label Weekly'
+description: 'Monitors “In Progress” issues for recent updates and posts reminders to assignees who have not provided activity.'
+author: 'Hack for LA'
 
 inputs:
   github-token:

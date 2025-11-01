@@ -32,7 +32,7 @@ jobs:
     if: github.repository == 'your-project/repo-name' # ⓷ 
     steps:
       - uses: actions/checkout@v5
-      - uses: hackforla/workflow-configs/add-update-label-weekly@v0 # ⓸ 
+      - uses: hackforla/automate-the-org/add-update-label-weekly@v0 # ⓸ 
         with:
           github-token: ${{ secrets.FG_HFLA_GRAPHQL_TOKEN }} # ⓹ 
           dry-run: ${{ github.event.inputs.dry-run || 'true' }}
