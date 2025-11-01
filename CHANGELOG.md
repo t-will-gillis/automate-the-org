@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Substantial changes token changes
 - feat: introduced org-level, fine-grained token
 - feat: introduced org-level, just-in-time token via GitHub App
+- feat: automation to generate PR in consuming projects
+- feat: template to accompany the automation
+- feat: create new GitHub App
 
 
 ## v0.1.7

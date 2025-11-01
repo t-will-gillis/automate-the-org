@@ -36,8 +36,8 @@ jobs:
         id: generate-app-token
         uses: actions/create-github-app-token@v1
         with:
-          app-id: ${{ secrets.HFLA_GRAPHQL_APP_ID }}
-          private-key: ${{ secrets.HFLA_GRAPHQL_APP_PRIVATE_KEY }}
+          app-id: ${{ secrets.HFLA_WORKFLOW_APP_ID }}
+          private-key: ${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}
 
       - name: Prepare variables
         run: |
