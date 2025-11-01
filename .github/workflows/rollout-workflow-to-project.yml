@@ -1,0 +1,135 @@
+name: Rollout Workflow to Project(s)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_repos:
+        description: 'Provide a comma-separated list of the target project/repos (e.g. "hackforla/project1", "hackforla/project2")'
+        required: true
+        type: string
+      workflow_file:
+        description: 'Primary workflow file for rollout in format source:destination (source relative to this workflow: destination relative to target repo)'
+        required: true
+        default: '../../example-configs/some-workflow.example.yml:.github/workflows/some-workflow.yml'
+      config_files:
+        description: 'Comma-separated list of files to copy in format source:destination (source relative to this workflow: destination relative to target repo)'
+        required: true
+        default: '../../example-configs/some-workflow-configs.example.yml:.github/workflow-configs/some-workflow-configs.yml'
+      rollout_branch:
+        description: 'Branch name created for PR for rollout'
+        required: false
+        default: 'rollout-add-central-workflow'
+      dry_run:
+        description: 'Preview changes without creating PRs'
+        type: boolean
+        default: true
+
+jobs:
+  rollout:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        repo: ${{ fromJson(inputs.target_repos == 'all' && '["hackforla/project1","hackforla/project2"]' || format('[{0}]', inputs.target_repos)) }}
+
+    steps:
+      - name: Generate token from GitHub App
+        id: generate-app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.HFLA_WORKFLOW_APP_ID }}
+          private-key: ${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}
+
+      - name: Prepare variables
+        run: |
+          echo "TARGET_REPOS=${{ github.event.inputs.target_repos }}" >> $GITHUB_ENV
+          echo "ROLL_OUT_BRANCH=${{ github.event.inputs.rollout_branch }}" >> $GITHUB_ENV
+          echo "WORKFLOW_FILE=${{ github.event.inputs.workflow_file }}" >> $GITHUB_ENV
+          echo "CONFIG_FILES=${{ github.event.inputs.config_files }}" >> $GITHUB_ENV
+          echo "DRY_RUN=${{ github.event.inputs.dry_run }}" >> $GITHUB_ENV
+
+      - name: Extract workflow name
+        run: |
+          WORKFLOW_NAME=$(grep -E '^name:' "$WORKFLOW_FILE" | sed 's/^name:[[:space:]]*//')
+          echo "WORKFLOW_NAME=$WORKFLOW_NAME" >> $GITHUB_ENV
+
+      - name: Rollout to each repo
+        run: |
+          IFS=',' read -ra REPOS <<< "$TARGET_REPOS"
+          for REPO in "${REPOS[@]}"; do
+            echo "Processing repo: $REPO"
+
+            # ⓵ Get default branch
+            DEFAULT_BRANCH=$(gh api repos/$REPO --jq '.default_branch' -H "Authorization: token ${{ steps.generate-app-token.outputs.token }}")
+            echo "Default branch: $DEFAULT_BRANCH"
+
+            # Only in 'DRY_RUN'mode
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "[DRY-RUN] Would clone repo: $REPO (branch: $DEFAULT_BRANCH)"
+              echo "[DRY-RUN] Would create branch: $ROLL_OUT_BRANCH"
+              echo "[DRY-RUN] Would copy workflow file: $WORKFLOW_FILE -> .github/workflows/$(basename "$WORKFLOW_FILE")"
+              if [ -n "$CONFIG_FILES" ]; then
+                IFS=',' read -ra FILES <<< "$CONFIG_FILES"
+                for FILE_PAIR in "${FILES[@]}"; do
+                  SRC="${FILE_PAIR%%:*}"
+                  DST="${FILE_PAIR##*:}"
+                  echo "[DRY-RUN] Would copy config file: $SRC -> $DST"
+                done
+              fi
+              echo "[DRY-RUN] Would commit changes: Install $WORKFLOW_NAME and project-specific files"
+              echo "[DRY-RUN] Would push branch: $ROLL_OUT_BRANCH"
+              echo "[DRY-RUN] Would create PR with title: Install workflow: $WORKFLOW_NAME"
+            else
+
+            # ⓶ Continue with clone default branch
+            git clone --depth 1 --branch "$DEFAULT_BRANCH" https://x-access-token:${{ steps.generate-app-token.outputs.token }}@github.com/$REPO temp-repo
+            cd temp-repo
+
+            # ⓷ Create rollout branch
+            git checkout -b "$ROLL_OUT_BRANCH"
+
+            # ⓸ Copy workflow YAML
+            WORKFLOW_FILE_DEST=".github/workflows/$(basename "$WORKFLOW_FILE")"  # minimal change: destination path
+            mkdir -p "$(dirname "$WORKFLOW_FILE_DEST")"
+            cp "$WORKFLOW_FILE" "$WORKFLOW_FILE_DEST"
+
+            # ⓹ Copy project-specific config files
+            if [ -n "$CONFIG_FILES" ]; then
+              IFS=',' read -ra FILES <<< "$CONFIG_FILES"
+              for FILE_PAIR in "${FILES[@]}"; do
+                SRC="${FILE_PAIR%%:*}"
+                DST="${FILE_PAIR##*:}"
+                mkdir -p "$(dirname "$DST")"
+                cp "$SRC" "$DST"
+              done
+            fi
+
+            # ⓺ Commit changes
+            git config user.name "Central Rollout Bot"
+            git config user.email "rollout-bot@hackforla.org"
+            git add .
+            git commit -m "Install ${WORKFLOW_NAME} and project-specific files"
+
+            # ⓻ Push rollout branch
+            git push origin "$ROLL_OUT_BRANCH"
+
+            # ⓼ Create Pull Request
+            PR_BODY=$(cat "../../.github/templates/pr-template.md")
+            PR_BODY="$PR_BODY
+            
+            Triggered by: @${{ github.actor }}
+            Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            Workflow: $WORKFLOW_NAME
+            "
+
+            gh pr create \
+              --repo $REPO \
+              --head "$ROLL_OUT_BRANCH" \
+              --base "$DEFAULT_BRANCH" \
+              --title "Install workflow: $WORKFLOW_NAME" \
+              --body "$PR_BODY"
+
+
+            # Cleanup for next repo
+            cd ..
+            rm -rf temp-repo
+          done

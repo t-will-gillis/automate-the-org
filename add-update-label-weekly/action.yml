@@ -1,0 +1,24 @@
+name: 'Add Update Label Weekly'
+description: 'Monitors “In Progress” issues for recent updates and posts reminders to assignees who have not provided activity.'
+author: 'Hack for LA'
+
+inputs:
+  github-token:
+    description: 'GitHub App authorization with just-in-time token'
+    required: true
+  config-path:
+    description: 'Path to the configuration file relative to repository root'
+    required: false
+    default: '.github/workflow-configs/add-update-label-weekly-config.yml'
+  dry-run:
+    description: 'Run in dry-run mode without posting comments or updating issues'
+    required: true
+    default: 'true'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+
+branding:
+  icon: 'clock'
+  color: 'blue'
