@@ -1,0 +1,38 @@
+name: Add Update Label Weekly
+
+# Customization notes:
+# 
+# ⓵ CUSTOMIZE: change cron. Currently Thurs 2300 PST, exc. July and December
+# ⓶ OK to remove. Has no effect b/c of PAT
+# ⓷ CUSTOMIZE: Change to your project repo name
+# ⓸ Confirm that this is most recent version
+# ⓹ Do not change- this is an organization token
+
+on:
+  schedule:
+    - cron: '0 7 * 1-6,8-11 5' # ⓵
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Run in dry-run mode without posting comments or updating issues'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+        default: 'true'
+
+# ⓶ Default token permissions
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  Add-Update-Label-Weekly:
+    runs-on: ubuntu-latest
+    if: github.repository == 'your-project/repo-name' # ⓷ 
+    steps:
+      - uses: actions/checkout@v5
+      - uses: hackforla/workflow-configs/add-update-label-weekly@v0 # ⓸ 
+        with:
+          github-token: ${{ secrets.FG_HFLA_GRAPHQL_TOKEN }} # ⓹ 
+          dry-run: ${{ github.event.inputs.dry-run || 'true' }}

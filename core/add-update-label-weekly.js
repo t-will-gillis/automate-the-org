@@ -229,7 +229,7 @@ async function postComment(issueNum, assignees, labelString, cutoffTime) {
 
     if (config.dryRun) {
       logger.debug(`Would post comment to issue #${issueNum}:`);
-      logger.debug(instructions);
+      // logger.debug(instructions);
       return;
     }
     // https://docs.github.com/en/rest/issues/comments?apiVersion=2022-11-28#create-an-issue-comment
@@ -246,9 +246,11 @@ async function postComment(issueNum, assignees, labelString, cutoffTime) {
   }
 }
 
-/***********************
-*** HELPER FUNCTIONS ***
-***********************/
+
+
+/******************************************************
+***               HELPER FUNCTIONS                  ***
+******************************************************/
 function isMomentRecent(dateString, cutoffTime) {
   return new Date(dateString) >= cutoffTime;
 }
@@ -313,8 +315,8 @@ function isCommentByBot(data) {
   // Use bot list from config, default to 'github-actions[bot]'
   const botLogins = config.bots || ['github-actions[bot]'];
   
-  // NOTE: this should not apply if `Complexity: Prework` omitted from the scans
-  // If the comment includes the MARKER, return false so it is not minimized
+  // NOTE: this will not apply if `Complexity: Prework` omitted from scans
+  // Else, if comment includes the MARKER, return false so it is not minimized
   let MARKER = '<!-- Skills Issue Activity Record -->'; 
   if (data.body && data.body.includes(MARKER)) {
     logger.info(`Found "Skills Issue Activity Record" - do not minimize`);
@@ -324,14 +326,15 @@ function isCommentByBot(data) {
   return botLogins.includes(data.actor.login);
 }
 
-// asynchronously minimize all the comments that are outdated
+// Asynchronously minimize all outdated comments
 async function minimizeComments(comment_node_ids) {
   for (const node_id of comment_node_ids) {
     if (config.dryRun) {
       logger.debug(`Would minimize comment ${node_id}`);
       continue;
     }
-    await new Promise((resolve) => { setTimeout(resolve, 1000); }); // wait for 1000ms before doing the GraphQL mutation
+    // Wait for 1000ms before doing the GraphQL mutation
+    await new Promise((resolve) => { setTimeout(resolve, 1000); }); 
     await minimizeIssueComment(github, node_id);
   }
 }

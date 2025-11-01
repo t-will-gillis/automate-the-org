@@ -14,7 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs: Troubleshooting guide
 
 ## [Unreleased]
-_No unreleased changes yet._
+- Substantial changes token changes
+- feat: introduced org-level, fine-grained token
+- feat: introduced org-level, just-in-time token via GitHub App
+
 
 ## v0.1.7
 2025-10-30

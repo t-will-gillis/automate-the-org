@@ -96,7 +96,7 @@ async function run() {
     
     logger.log(``);
     logger.log(`=`.repeat(60));
-    logger.success(`Add Update Label Weekly - completed successfully`);
+    logger.log(`Add Update Label Weekly - completed successfully`);
     logger.log(`=`.repeat(60));
     
   } catch (error) {
