@@ -1,0 +1,24 @@
+# Temporary file to confirm GitHub App token and secret
+
+name: Test GitHub App
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate token from GitHub App
+        id: generate_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.HFLA_GRAPHQL_APP_ID }}
+          private-key: ${{ secrets.HFLA_GRAPHQL_APP_PRIVATE_KEY }}
+      
+      - name: Use the token to make a test API call
+        env:
+          GH_TOKEN: ${{ steps.generate_token.outputs.token }}
+        run: |
+          echo "Testing if token works by fetching repo info..."
+          gh api /repos/${{ github.repository }}
+          echo "Success! Token is working."
