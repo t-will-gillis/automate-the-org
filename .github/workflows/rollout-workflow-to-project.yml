@@ -34,11 +34,17 @@ jobs:
           echo "ROLL_OUT_BRANCH=${{ github.event.inputs.rollout_branch }}" >> $GITHUB_ENV
           echo "DRY_RUN=${{ github.event.inputs.dry_run }}" >> $GITHUB_ENV
 
+      - name: Checkout the source workflows repo
+        uses: actions/checkout@v5
+        with:
+          repository: hackforla/automate-the-org
+          path: central
+
       - name: Extract rollout config from PR template
         id: parse-config
         run: |
           # Extract YAML block from .github/templates/pr-template.md into a temp YAML file
-          awk '/^```yaml/{flag=1;next}/^```$/{flag=0}flag' .github/templates/pr-template.md > rollout-config.yaml
+          awk '/^```yaml/{flag=1;next}/^```$/{flag=0}flag' central/.github/templates/pr-template.md > rollout-config.yaml
 
           echo "---- rollout-config.yaml ----"
           cat rollout-config.yaml
