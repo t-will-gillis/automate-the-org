@@ -108,7 +108,7 @@ jobs:
               echo "[DRY-RUN] Would push branch: $ROLL_OUT_BRANCH"
               
               # read PR template for preview
-              PR_BODY=$(cat .github/templates/pr-template.md)
+              PR_BODY=$(cat central/.github/templates/pr-template.md)
               echo "[DRY-RUN] PR body preview:"
               echo "----------------------------------"
               echo "$PR_BODY"
@@ -151,7 +151,7 @@ jobs:
             git push origin "$ROLL_OUT_BRANCH"
 
             # ⓼ Create Pull Request
-            PR_BODY=$(cat ../.github/templates/pr-template.md)
+            PR_BODY=$(cat central/.github/templates/pr-template.md)
 
             # Substitute placeholders if needed (example replacements)
             PR_BODY=$(echo "$PR_BODY" \
