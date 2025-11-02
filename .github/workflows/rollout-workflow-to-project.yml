@@ -27,10 +27,7 @@ on:
 jobs:
   rollout:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        repo: ${{ fromJson(inputs.target_repos == 'all' && '["hackforla/project1","hackforla/project2"]' || format('[{0}]', inputs.target_repos)) }}
-
+    
     steps:
       - name: Generate token from GitHub App
         id: generate-app-token
