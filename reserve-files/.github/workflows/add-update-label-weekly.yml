@@ -22,7 +22,7 @@ on:
 jobs:
   Add-Update-Label-Weekly:
     runs-on: ubuntu-latest
-    if: github.repository == 'your-project/repo-name' # ⓶
+    if: github.repository == 'website/gh-pages' # ⓶
     steps:
       - name: Generate token from GitHub App
         id: generate-app-token
