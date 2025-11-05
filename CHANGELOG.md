@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs: Troubleshooting guide
 
 ## [Unreleased]
+_No unreleased changes yet._
+
+## v0.3.0
+2025-11-05
+
 - Testing mode against Website
 - Comments specify time of last activity, label key
 
