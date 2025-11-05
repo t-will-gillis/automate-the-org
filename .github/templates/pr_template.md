@@ -12,7 +12,7 @@ config_files:
   - src: ../../example-configs/label-directory.example.yml
     dest: .github/workflow-configs/label-directory.yml
   - src: ../../example-configs/add-update-instructions-template.example.md
-    dest: .github/workflow-configs/template/add-update-instructions-template.md
+    dest: .github/workflow-configs/templates/add-update-instructions-template.md
 ```
 ---
 ## Automated Workflow Setup

@@ -197,9 +197,11 @@ function isTimelineOutdated(timeline, issueNum, assignees) {
     ? [lastCommentTimestamp, 'Assignee\'s last comment']
     : [lastAssignedTimestamp, 'Assignee\'s assignment'];
 
+  logger.debug(`Issue #${issueNum}: ${lastActivityType} was at ${lastActivityTimestamp}`);
+
   // If 'lastActivityTimestamp' more recent than 'updatedCutoffTime', keep updated label and remove others
   if (isMomentRecent(lastActivityTimestamp, updatedCutoffTime)) {
-    logger.info(`Issue #${issueNum}: ${lastActivityType} sooner than ${updatedByDays} days ago, retain '${labels.statusUpdated}' label if exists `);
+    logger.info(`Issue #${issueNum}: ${lastActivityType} sooner than ${updatedByDays} days ago, retain 'statusUpdated' label if exists `);
     return { result: false, labels: labels.statusUpdated, cutoff: updatedCutoffTime }
   }
 
@@ -211,12 +213,12 @@ function isTimelineOutdated(timeline, issueNum, assignees) {
 
   // If 'lastActivityTimestamp' not yet older than the 'inactiveCutoffTime', issue needs update label
   if (isMomentRecent(lastActivityTimestamp, inactiveCutoffTime)) { 
-    logger.info(`Issue #${issueNum}: ${lastActivityType} between ${commentByDays} and ${inactiveByDays} days ago, use '${labels.statusInactive1}' label`)
+    logger.info(`Issue #${issueNum}: ${lastActivityType} between ${commentByDays} and ${inactiveByDays} days ago, use 'statusInactive1' label`)
     return { result: true, labels: labels.statusInactive1, cutoff: toUpdateCutoffTime }
   }
 
   // If 'lastActivityTimestamp' is older than the 'inactiveCutoffTime', issue is outdated and needs inactive label
-  logger.info(`Issue #${issueNum}: ${lastActivityType} older than ${inactiveByDays} days ago, use '${labels.statusInactive2}' label`)
+  logger.info(`Issue #${issueNum}: ${lastActivityType} older than ${inactiveByDays} days ago, use 'statusInactive2' label`)
   return { result: true, labels: labels.statusInactive2, cutoff: inactiveCutoffTime }
 }
 
