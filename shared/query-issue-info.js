@@ -5,8 +5,10 @@
  * @returns {Object}         - An object containing the item ID and its status name
  */
 async function queryIssueInfo(github, context, issueNum) {
-  const repoOwner = context.repo.owner;
-  const repoName = context.repo.repo;
+  // const repoOwner = context.repo.owner;
+  // const repoName = context.repo.repo; ******************************************
+  const repoOwner = 'hackforla';
+  const repoName = 'website';
 
   const query = `query($owner: String!, $repo: String!, $issueNum: Int!) {
     repository(owner: $owner, name: $repo) {
