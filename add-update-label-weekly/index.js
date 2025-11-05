@@ -47,7 +47,7 @@ async function run() {
       projectRepoPath,
       configPath,
       defaults,
-      overrides: { dryRun },
+      overrides: { dryRun, webRun },
       requiredFields: [
         'timeframes.updatedByDays',
         'timeframes.commentByDays',

@@ -16,8 +16,10 @@ async function getIssueTimeline(github, context, issueNum) {
     try {
       // https://docs.github.com/en/rest/issues/timeline?apiVersion=2022-11-28#list-timeline-events-for-an-issue
       const results = await github.request('GET /repos/{owner}/{repo}/issues/{issue_number}/timeline', {
-        owner: context.repo.owner,
-        repo: context.repo.repo,
+        // owner: context.repo.owner,
+        // repo: context.repo.repo, ***************************************
+        owner: 'hackforla',
+        repo: 'website',
         issue_number: issueNum,
         per_page: 100,
         page: page,

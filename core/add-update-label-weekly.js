@@ -54,6 +54,12 @@ async function main({ github: g, context: c, labels: l, config: cfg }) {
   inactiveCutoffTime = new Date(Date.now() - inactiveByDays * 24 * 60 * msPerMinute);
   upperLimitCutoffTime = new Date(Date.now() - (upperLimitDays * 24 * 60 - 10) * msPerMinute);
 
+  // **********************************************************************
+  console.log(`${updatedCutoffTime}`);
+  console.log(`${toUpdateCutoffTime}`);
+  console.log(`${inactiveCutoffTime}`);
+  console.log(`${upperLimitCutoffTime}`);
+
   // Retrieve all issue numbers from a repo
   const issueNums = await getIssueNumsFromRepo();
 
@@ -98,8 +104,10 @@ async function getIssueNumsFromRepo() {
   while (true) {
     // https://docs.github.com/en/rest/issues/issues?apiVersion=2022-11-28#list-repository-issues
     const issueData = await github.request('GET /repos/{owner}/{repo}/issues', {
-      owner: context.repo.owner,
-      repo: context.repo.repo,
+      // owner: context.repo.owner,
+      // repo: context.repo.repo, *****************************************
+      owner: 'hackforla',
+      repo: 'website',
       assignee: '*',
       per_page: 100,
       page: pageNum,
@@ -264,8 +272,10 @@ function isLinkedIssue(data, issueNum) {
 async function getAssignees(issueNum) {
   try {
     const results = await github.rest.issues.get({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
+      // owner: context.repo.owner,
+      // repo: context.repo.repo, ***************************************
+      owner: 'hackforla',
+      repo: 'website',
       issue_number: issueNum,
     });
     const assigneesData = results.data.assignees;
