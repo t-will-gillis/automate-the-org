@@ -60,6 +60,12 @@ async function main({ github: g, context: c, labels: l, config: cfg }) {
   inactiveCutoffTime = new Date(Date.now() - inactiveByDays * 24 * 60 * msPerMinute);
   upperLimitCutoffTime = new Date(Date.now() - (upperLimitDays * 24 * 60 - 10) * msPerMinute);
 
+  // **********************************************************************
+  console.log(`${updatedCutoffTime}`);
+  console.log(`${toUpdateCutoffTime}`);
+  console.log(`${inactiveCutoffTime}`);
+  console.log(`${upperLimitCutoffTime}`);
+
   // Retrieve all issue numbers from a repo
   const issueNums = await getIssueNumsFromRepo();
 
@@ -104,8 +110,10 @@ async function getIssueNumsFromRepo() {
   while (true) {
     // https://docs.github.com/en/rest/issues/issues?apiVersion=2022-11-28#list-repository-issues
     const issueData = await github.request('GET /repos/{owner}/{repo}/issues', {
-      owner: context.repo.owner,
-      repo: context.repo.repo,
+      // owner: context.repo.owner,
+      // repo: context.repo.repo, *****************************************
+      owner: 'hackforla',
+      repo: 'website',
       assignee: '*',
       per_page: 100,
       page: pageNum,
@@ -203,9 +211,11 @@ function isTimelineOutdated(timeline, issueNum, assignees) {
     ? [lastCommentTimestamp, 'Assignee\'s last comment']
     : [lastAssignedTimestamp, 'Assignee\'s assignment'];
 
+  logger.debug(`Issue #${issueNum}: ${lastActivityType} was at ${lastActivityTimestamp}`);
+
   // If 'lastActivityTimestamp' more recent than 'updatedCutoffTime', keep updated label and remove others
   if (isMomentRecent(lastActivityTimestamp, updatedCutoffTime)) {
-    logger.info(`Issue #${issueNum}: ${lastActivityType} sooner than ${updatedByDays} days ago, retain '${labels.statusUpdated}' label if exists `);
+    logger.info(`Issue #${issueNum}: ${lastActivityType} sooner than ${updatedByDays} days ago, retain 'statusUpdated' label if exists `);
     return { result: false, labels: labels.statusUpdated, cutoff: updatedCutoffTime }
   }
 
@@ -217,12 +227,12 @@ function isTimelineOutdated(timeline, issueNum, assignees) {
 
   // If 'lastActivityTimestamp' not yet older than the 'inactiveCutoffTime', issue needs update label
   if (isMomentRecent(lastActivityTimestamp, inactiveCutoffTime)) { 
-    logger.info(`Issue #${issueNum}: ${lastActivityType} between ${commentByDays} and ${inactiveByDays} days ago, use '${labels.statusInactive1}' label`)
+    logger.info(`Issue #${issueNum}: ${lastActivityType} between ${commentByDays} and ${inactiveByDays} days ago, use 'statusInactive1' label`)
     return { result: true, labels: labels.statusInactive1, cutoff: toUpdateCutoffTime }
   }
 
   // If 'lastActivityTimestamp' is older than the 'inactiveCutoffTime', issue is outdated and needs inactive label
-  logger.info(`Issue #${issueNum}: ${lastActivityType} older than ${inactiveByDays} days ago, use '${labels.statusInactive2}' label`)
+  logger.info(`Issue #${issueNum}: ${lastActivityType} older than ${inactiveByDays} days ago, use 'statusInactive2' label`)
   return { result: true, labels: labels.statusInactive2, cutoff: inactiveCutoffTime }
 }
 
@@ -268,8 +278,10 @@ function isLinkedIssue(data, issueNum) {
 async function getAssignees(issueNum) {
   try {
     const results = await github.rest.issues.get({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
+      // owner: context.repo.owner,
+      // repo: context.repo.repo, ***************************************
+      owner: 'hackforla',
+      repo: 'website',
       issue_number: issueNum,
     });
     const assigneesData = results.data.assignees;
@@ -34501,8 +34513,10 @@ async function getIssueTimeline(github, context, issueNum) {
     try {
       // https://docs.github.com/en/rest/issues/timeline?apiVersion=2022-11-28#list-timeline-events-for-an-issue
       const results = await github.request('GET /repos/{owner}/{repo}/issues/{issue_number}/timeline', {
-        owner: context.repo.owner,
-        repo: context.repo.repo,
+        // owner: context.repo.owner,
+        // repo: context.repo.repo, ***************************************
+        owner: 'hackforla',
+        repo: 'website',
         issue_number: issueNum,
         per_page: 100,
         page: page,
@@ -36912,7 +36926,7 @@ async function run() {
       projectRepoPath,
       configPath,
       defaults,
-      overrides: { dryRun },
+      overrides: { dryRun, webRun },
       requiredFields: [
         'timeframes.updatedByDays',
         'timeframes.commentByDays',
