@@ -577,7 +577,7 @@ exports.addPath = addPath;
 function getInput(name, options) {
     const val = process.env[`INPUT_${name.replace(/ /g, '_').toUpperCase()}`] || '';
     if (options && options.required && !val) {
-        throw  new Error(`Input required and not supplied: ${name}`);
+        throw new Error(`Input required and not supplied: ${name}`);
     }
     if (options && options.trimWhitespace === false) {
         return val;
@@ -34690,7 +34690,7 @@ async function queryIssueInfo(github, context, issueNum) {
     repo: repoName,
     issueNum: issueNum,
   };
-
+  console.log({ repoOwner, repoName, issueNum });
   try {
     const response = await github.graphql(query, variables);
 

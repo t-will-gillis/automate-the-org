@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs: Troubleshooting guide
 
 ## [Unreleased]
-_No unreleased changes yet._
+- bug: fix logic in add-update-label-weekly
 
 ## v0.3.3
 2025-11-05
