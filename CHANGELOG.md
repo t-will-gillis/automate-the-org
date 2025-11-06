@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 _No unreleased changes yet._
 
+## v0.3.3
+2025-11-05
+
+- bug: queryIssueInfo
+
 ## v0.3.2
 2025-11-05
 
