@@ -19,10 +19,11 @@ workflow-configs/
 │
 ├── shared/                             # Shared utilities across all actions
 │   ├── find-linked-issue.js
-│   ├── format-log-messages.js          # 
+│   ├── format-log-messages.js          # `logger` utility to sort log
 │   ├── get-issue-labels.js
-│   ├── get-issue-timeline.js
-│   ├── hide-issue-comment.js
+│   ├── hide-issue-comment.js           # Minimizes comments 
+│   ├── manage-issue-labels.js          # Set of issue-labelling utilities 
+│   ├── manage-issue-timeline.js        # Set of issue-timeline utilities
 │   ├── post-issue-comment.js
 │   ├── query-issue-info.js
 │   ├── resolve-configs.js              # Resolve config files
@@ -31,7 +32,7 @@ workflow-configs/
 ├── example-configs/                    # Example configuration files
 │   ├── add-update-label-weekly-config.example.yml
 │   ├── add-update-label-weekly.example.yml
-│   └── label-directory.example.yml
+│   └── label-directory.example.yml     # MAY BE REMOVED
 │
 ├── package.json                        # Dependencies for all actions
 ├── 
@@ -160,14 +161,12 @@ See [example-configs/label-directory.example.yml](./example-configs/label-direct
 
 
 
-#### Step 5: Create Token and Secret
+#### Step 5: About Tokens and Secrets
 
-Create a Personal Access Token with the scopes:
-- `repo` (full control)
-- `project` (full control)
-
-Add it to the secret (default is `PROJECT_GRAPHQL_TOKEN`) to use in the workflow.
-
+These workflows use centrally maintained GitHub Apps to authorize and authenticate workflows,
+including `hfla-graphql-app` and `hfla-workflow-rollout`. The central organization settings
+allow for configuring apps on a project-by-project basis. This must be configured before
+each project can run the workflow locally in their own repo.
 
 
 ### Action Inputs
