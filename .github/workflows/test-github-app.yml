@@ -37,7 +37,7 @@ jobs:
     
       - name: Generate token from GitHub App
         id: generate_token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ secrets.HFLA_GRAPHQL_APP_ID }}
           private-key: ${{ secrets.HFLA_GRAPHQL_APP_PRIVATE_KEY }}
@@ -52,7 +52,7 @@ jobs:
 
       - name: Generate token from GitHub App
         id: generate_other_token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ secrets.HFLA_WORKFLOW_APP_ID }}
           private-key: ${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}
@@ -63,9 +63,9 @@ jobs:
         run: |
           echo "Checking if GitHub App is installed on hackforla/website..."
           if gh api /repos/hackforla/website/installation --jq '.id' 2>&1; then
-            echo "✅ GitHub App is installed"
+            echo "GitHub App is installed"
           else
-            echo "❌ GitHub App is NOT installed on hackforla/website"
+            echo "GitHub App is NOT installed on hackforla/website"
             echo "Go to: https://github.com/organizations/hackforla/settings/installations"
             echo "And ensure the app has access to hackforla/website"
             exit 1
