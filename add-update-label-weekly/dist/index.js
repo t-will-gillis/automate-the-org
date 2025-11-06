@@ -577,7 +577,7 @@ exports.addPath = addPath;
 function getInput(name, options) {
     const val = process.env[`INPUT_${name.replace(/ /g, '_').toUpperCase()}`] || '';
     if (options && options.required && !val) {
-        throw new Error(`Input required and not supplied: ${name}`);
+        throw  new Error(`Input required and not supplied: ${name}`);
     }
     if (options && options.trimWhitespace === false) {
         return val;
@@ -34659,8 +34659,10 @@ module.exports = { addLabels, removeLabels }
  * @returns {Object}         - An object containing the item ID and its status name
  */
 async function queryIssueInfo(github, context, issueNum) {
-  const repoOwner = context.repo.owner;
-  const repoName = context.repo.repo;
+  // const repoOwner = context.repo.owner;
+  // const repoName = context.repo.repo; ******************************************
+  const repoOwner = 'hackforla';
+  const repoName = 'website';
 
   const query = `query($owner: String!, $repo: String!, $issueNum: Int!) {
     repository(owner: $owner, name: $repo) {

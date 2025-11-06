@@ -36,7 +36,7 @@ async function queryIssueInfo(github, context, issueNum) {
     repo: repoName,
     issueNum: issueNum,
   };
-
+  console.log({ repoOwner, repoName, issueNum });
   try {
     const response = await github.graphql(query, variables);
 
