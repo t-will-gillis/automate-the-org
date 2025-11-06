@@ -55,9 +55,15 @@ async function main({ github: g, context: c, labels: l, config: cfg }) {
   upperLimitCutoffTime = new Date(Date.now() - (upperLimitDays * 24 * 60 - 10) * msPerMinute);
 
   // **********************************************************************
+  now = new Date(Date.now());
+  console.log(`${now}`);
+  console.log(`${updatedByDays}`);
   console.log(`${updatedCutoffTime}`);
+  console.log(`${commentByDays}`);
   console.log(`${toUpdateCutoffTime}`);
+  console.log(`${inactiveByDays}`);
   console.log(`${inactiveCutoffTime}`);
+  console.log(`${upperLimitDays}`);
   console.log(`${upperLimitCutoffTime}`);
 
   // Retrieve all issue numbers from a repo

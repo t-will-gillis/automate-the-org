@@ -220,9 +220,9 @@ function isTimelineOutdated(timeline, issueNum, assignees) {
   }
 
   // If 'lastActivityTimestamp' more recent than 'toUpdateCutoffTime', remove all labels
-  if (isMomentRecent(lastActivityTimestamp, updatedCutoffTime)) {
+  if (isMomentRecent(lastActivityTimestamp, toUpdateCutoffTime)) {
     logger.info(`Issue #${issueNum}: ${lastActivityType} between ${updatedByDays} and ${commentByDays} days ago, no update-related labels`)
-    return { result: false, labels: '', cutoff: updatedCutoffTime} 
+    return { result: false, labels: '', cutoff: toUpdateCutoffTime} 
   }
 
   // If 'lastActivityTimestamp' not yet older than the 'inactiveCutoffTime', issue needs update label
