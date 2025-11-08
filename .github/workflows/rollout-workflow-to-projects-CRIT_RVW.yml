@@ -187,8 +187,7 @@ jobs:
             echo "Processing repo: $REPO . . ."
             
             # Get default branch
-            DEFAULT_BRANCH=$(gh api repos/$REPO --jq '.default_branch' \
-              -H "Authorization: token $APP_TOKEN")
+            DEFAULT_BRANCH=$(gh api repos/$REPO --jq '.default_branch')
             echo "Default branch: $DEFAULT_BRANCH"
 
             # Only in 'DRY_RUN' mode
