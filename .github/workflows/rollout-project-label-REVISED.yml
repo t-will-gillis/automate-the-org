@@ -50,10 +50,10 @@ jobs:
 
             // Generate JWT for App
             const { token: jwt } = await auth({ type: "app" });
-            const octokit = new github.getOctokit(jwt);
+            const appOctokit = new github.getOctokit(jwt);
 
             // Get installation ID
-            const { data: installation } = await octokit.rest.apps.getRepoInstallation({ owner, repo });
+            const { data: installation } = await appOctokit.rest.apps.getRepoInstallation({ owner, repo });
 
             // Generate installation token
             const { token } = await auth({ type: "installation", installationId: installation.id });
