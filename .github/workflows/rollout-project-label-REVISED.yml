@@ -41,8 +41,6 @@ jobs:
           github-token: ${{ github.token }}
           script: |
             const { createAppAuth } = require("@octokit/auth-app");
-            let core = require('@actions/core');
-
             const appId = process.env.GH_APP_ID;
             const privateKey = process.env.GH_APP_PRIVATE_KEY;
             const targetRepo = "${{ github.event.inputs.target_repo }}";
