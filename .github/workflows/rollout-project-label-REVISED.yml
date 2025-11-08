@@ -99,7 +99,7 @@ jobs:
         with:
           repository: ${{ github.event.inputs.target_repo }}
           path: target
-          token: ${{ steps.generate-app-token.outputs.APP_TOKEN }}
+          token: ${{ steps.generate-app-token.outputs.token }}
 
       - name: Export workflow inputs to environment
         run: |
@@ -110,7 +110,7 @@ jobs:
       - name: Retrieve all labels from target repo
         id: retrieve-labels
         env:
-          GITHUB_TOKEN: ${{ steps.generate-app-token.outputs.APP_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate-app-token.outputs.token }}
         run: |
           echo "Retrieving labels for $TARGET_REPO"
           # paginate all labels into one JSON array
@@ -176,7 +176,7 @@ jobs:
 
       - name: Commit and push rollout branch
         env:
-          GITHUB_TOKEN: ${{ steps.generate-app-token.outputs.APP_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate-app-token.outputs.token }}
         run: |
           cd target
           ROLLOUT_BRANCH="${ROLLOUT_BRANCH}"
@@ -209,7 +209,7 @@ jobs:
 
       - name: Create Pull Request for label-directory rollout
         env:
-          GITHUB_TOKEN: ${{ steps.generate-app-token.outputs.APP_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate-app-token.outputs.token }}
         run: |
           ROLLOUT_BRANCH="${ROLLOUT_BRANCH}"
           DRY_RUN="${DRY_RUN}"
