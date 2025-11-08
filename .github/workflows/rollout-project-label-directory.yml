@@ -1,0 +1,281 @@
+name: Rollout Project Label Directory
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_repo:
+        description: 'Provide the name of the target repo, e.g. "org/project"'
+        required: true
+        type: string
+      rollout_branch:
+        description: 'Branch name created for PR for label directory rollout'
+        required: false
+        default: 'automation/rollout-label-directory'
+      dry_run:
+        description: 'Dry-run mode: preview changes without creating PRs'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  Rollout-Label-Directory:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v5
+        with:
+          repository: hackforla/automate-the-org
+          path: central
+    
+      - name: Generate GitHub App token for target repo
+        id: generate-app-token
+        uses: actions/github-script@v8
+        env:
+          GH_APP_ID: ${{ secrets.HFLA_WORKFLOW_APP_ID }}
+          GH_APP_PRIVATE_KEY: ${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const { createAppAuth } = require("@octokit/auth-app");
+            const core = require('@actions/core');
+
+            const appId = process.env.GH_APP_ID;
+            const privateKey = process.env.GH_APP_PRIVATE_KEY;
+            const targetRepo = "${{ github.event.inputs.target_repo }}";
+            const [owner, repo] = targetRepo.split('/');
+
+            // Initialize App authentication
+            const auth = createAppAuth({ appId, privateKey });
+
+            // Generate JWT for the App
+            const { token: jwt } = await auth({ type: "app" });
+
+            const octokit = new github.getOctokit(jwt);
+
+            // Fetch installation ID for this repo
+            const { data: installation } = await octokit.rest.apps.getRepoInstallation({
+              owner,
+              repo
+            });
+
+            const installationId = installation.id;
+
+            // Generate installation token
+            const { token } = await auth({ type: "installation", installationId });
+
+            // Output token for use in subsequent steps
+            core.setOutput("APP_TOKEN", token);
+
+      - name: Verify token generation
+        run: |
+          if [[ -z "${{ steps.generate-app-token.outputs.APP_TOKEN }}" ]]; then
+            echo "Error: GitHub App token generation failed"
+            exit 1
+          fi
+          echo "GitHub App token generation confirmed"
+
+      - name: Checkout target repo
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ github.event.inputs.target_repo }}
+          path: target
+
+      - name: Retrieve all labels from target repo
+        id: retrieve-labels
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ steps.generate-app-token.outputs.APP_TOKEN }}
+          script: |
+            const octokit = github.getOctokit(core.getInput('github-token'));
+            const [owner, repo] = "${{ github.event.inputs.target_repo }}".split('/');
+
+            let allLabels = [];
+            let pageNum = 1;
+            let keepFetching = true
+
+            while (keepFetching) {
+              const { data: labels } = await octokit.rest.issues.listLabelsForRepo({
+                owner,
+                repo,
+                per_page: 100
+                page: pageNum
+              });
+
+              allLabels.push(...labels);
+
+              if (labels.length < per_page) {
+                keepFetching = false;
+              } else {
+                page++;
+              }
+            }
+
+            // Output simplified JSON for later steps
+            const labelData = allLabels.map(label => ({
+              labelId: label.id,
+              labelName: label.name
+            }));
+
+            core.setOutput('LABELS_JSON', JSON.stringify(labelData));
+
+      - name: Generate label-directory.json
+        id: generate-json
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ steps.generate-app-token.outputs.APP_TOKEN }}
+          script: |
+            const core = require('@actions/core');
+            const fs = require('fs').promises;
+            const path = require('path');
+
+            // Path to write the label-directory.json inside target repo checkout
+            const filepath = 'github-actions/utilities/_data/label-directory.json';
+
+            // Retrieve labels from previous step
+            const labels = JSON.parse('${{ steps.fetch-labels.outputs.LABELS_JSON }}');
+
+            // Helper function: create camelCase label keys
+            function createInitiallabelKey(data, labelName) {
+              let labelKey = '';
+              const isAlphanumeric = str => /^[a-z0-9]+$/gi.test(str);
+              let labelInterim = labelName.split(/[^a-zA-Z0-9]+/);
+              for (let i = 0; i < labelInterim.length; i++) {
+                  if (i === 0) {
+                      labelKey += labelInterim[0].toLowerCase();
+                  } else if (isAlphanumeric(labelInterim[i])) {
+                      labelKey += labelInterim[i].split(' ').map((word) => word[0].toUpperCase() + word.slice(1).toLowerCase()).join('');
+                  }
+              }
+              return labelKey;
+            }
+
+            // Initialize empty JSON object
+            const labelDirectory = {};
+
+            for (const label of labels) {
+              const { labelId, labelName } = label;
+              const labelKey = createInitiallabelKey(labelDirectory, labelName);
+              labelDirectory[labelKey] = [labelName, Number(labelId)];
+            }
+
+            // Ensure folder exists
+            const dir = path.dirname(filepath);
+            await fs.mkdir(dir, { recursive: true });
+
+            // Write label-directory.json
+            await fs.writeFile(filepath, JSON.stringify(labelDirectory, null, 2));
+
+            console.log('Generated label-directory.json:');
+            console.log(JSON.stringify(labelDirectory, null, 2));
+
+            // Output path for downstream steps
+            core.setOutput('FILEPATH', filepath);
+
+      - name: Create rollout branch and commit label-directory.json
+        id: commit-branch
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ steps.generate-app-token.outputs.APP_TOKEN }}
+          script: |
+            const core = require('@actions/core');
+            const fs = require('fs').promises;
+            const path = require('path');
+
+            const rolloutBranch = '${{ github.event.inputs.rollout_branch }}';
+            const targetRepo = '${{ github.event.inputs.target_repo }}';
+            const dryRun = ${{ github.event.inputs.dry_run }};
+
+            const [owner, repo] = targetRepo.split('/');
+            const filepath = '${{ steps.generate-json.outputs.FILEPATH }}';
+            const fileContent = await fs.readFile(filepath, 'utf8');
+
+            if (dryRun) {
+              console.log(`[DRY-RUN] Would create branch '${rolloutBranch}' and commit ${filepath}`);
+              return;
+            }
+
+            // Get default branch SHA to branch from
+            const { data: repoInfo } = await github.rest.repos.get({
+              owner,
+              repo
+            });
+            const defaultBranch = repoInfo.default_branch;
+
+            const { data: refData } = await github.rest.git.getRef({
+              owner,
+              repo,
+              ref: `heads/${defaultBranch}`
+            });
+
+            const baseSha = refData.object.sha;
+
+            // Create new branch
+            try {
+              await github.rest.git.createRef({
+                owner,
+                repo,
+                ref: `refs/heads/${rolloutBranch}`,
+                sha: baseSha
+              });
+              console.log(`Created branch '${rolloutBranch}' from '${defaultBranch}'`);
+            } catch (err) {
+              if (err.status === 422) {
+                console.log(`Branch '${rolloutBranch}' already exists, continuing...`);
+              } else {
+                throw err;
+              }
+            }
+
+            // Commit the file
+            await github.rest.repos.createOrUpdateFileContents({
+              owner,
+              repo,
+              path: filepath,
+              message: `Add/Update label-directory.json via automation`,
+              content: Buffer.from(fileContent).toString('base64'),
+              branch: rolloutBranch
+            });
+
+            console.log(`Committed '${filepath}' to branch '${rolloutBranch}'`);
+
+      - name: Create Pull Request for label-directory rollout
+        id: create-pr
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ steps.generate-app-token.outputs.APP_TOKEN }}
+          script: |
+            const core = require('@actions/core');
+
+            const targetRepo = '${{ github.event.inputs.target_repo }}';
+            const rolloutBranch = '${{ github.event.inputs.rollout_branch }}';
+            const dryRun = ${{ github.event.inputs.dry_run }};
+
+            const [owner, repo] = targetRepo.split('/');
+
+            // Get default branch
+            const { data: repoInfo } = await github.rest.repos.get({ owner, repo });
+            const defaultBranch = repoInfo.default_branch;
+
+            if (dryRun) {
+              console.log(`[DRY-RUN] Would create PR from '${rolloutBranch}' into '${defaultBranch}'`);
+              return;
+            }
+
+            // Create Pull Request
+            const { data: pr } = await github.rest.pulls.create({
+              owner,
+              repo,
+              title: `Rollout label-directory.json to ${repo}`,
+              head: rolloutBranch,
+              base: defaultBranch,
+              body: `Automated rollout of label-directory.json for review.`
+            });
+
+            console.log(`Created Pull Request #${pr.number}: ${pr.html_url}`);
+
+            // Output PR URL for downstream steps
+            core.setOutput('PR_URL', pr.html_url);
