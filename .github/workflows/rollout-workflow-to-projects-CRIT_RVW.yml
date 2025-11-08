@@ -188,7 +188,8 @@ jobs:
             export GH_TOKEN="$APP_TOKEN"
             
             # Get default branch
-            DEFAULT_BRANCH=$(gh api repos/$REPO --jq '.default_branch')
+            DEFAULT_BRANCH=$(gh api repos/$REPO --jq '.default_branch'\
+              -H "Authorization: token $GH_TOKEN")
             echo "Default branch: $DEFAULT_BRANCH"
 
             # Only in 'DRY_RUN' mode
