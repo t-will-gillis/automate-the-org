@@ -185,6 +185,7 @@ jobs:
           IFS=',' read -ra REPOS <<< "$TARGET_REPO"
           for REPO in "${REPOS[@]}"; do
             echo "Processing repo: $REPO . . ."
+            export GH_TOKEN="$APP_TOKEN"
             
             # Get default branch
             DEFAULT_BRANCH=$(gh api repos/$REPO --jq '.default_branch')
