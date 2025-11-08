@@ -31,34 +31,60 @@ jobs:
           repository: hackforla/automate-the-org
           path: central
 
-      - name: Generate GitHub App token for target repo
+      - name: Generate token from GitHub App
         id: generate-app-token
-        uses: actions/github-script@v8
-        env:
-          GH_APP_ID: ${{ secrets.HFLA_WORKFLOW_APP_ID }}
-          GH_APP_PRIVATE_KEY: ${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}
-        with:
-          github-token: ${{ github.token }}
-          script: |
-            const { createAppAuth } = require("@octokit/auth-app");
-            const appId = process.env.GH_APP_ID;
-            const privateKey = process.env.GH_APP_PRIVATE_KEY;
-            const targetRepo = "${{ github.event.inputs.target_repo }}";
-            const [owner, repo] = targetRepo.split('/');
-
-            const auth = createAppAuth({ appId, privateKey });
-
-            // Generate JWT for App
-            const { token: jwt } = await auth({ type: "app" });
-            const appOctokit = new github.getOctokit(jwt);
-
-            // Get installation ID
-            const { data: installation } = await appOctokit.rest.apps.getRepoInstallation({ owner, repo });
-
-            // Generate installation token
-            const { token } = await auth({ type: "installation", installationId: installation.id });
-
-            core.setOutput("APP_TOKEN", token);
+        run: |
+          # ------------> FUTURE: Generalize GitHub Apps
+          
+          # Generate JWT
+          NOW=$(date +%s)
+          IAT=$((NOW - 60))
+          EXP=$((NOW + 600))
+          
+          HEADER='{"alg":"RS256","typ":"JWT"}'
+          PAYLOAD="{\"iat\":${IAT},\"exp\":${EXP},\"iss\":\"${{ secrets.HFLA_WORKFLOW_APP_ID }}\"}"
+          
+          # Create JWT using OpenSSL
+          HEADER_B64=$(echo -n "$HEADER" | openssl base64 -e -A | tr '+/' '-_' | tr -d '=')
+          PAYLOAD_B64=$(echo -n "$PAYLOAD" | openssl base64 -e -A | tr '+/' '-_' | tr -d '=')
+          SIGNATURE=$(echo -n "${HEADER_B64}.${PAYLOAD_B64}" | \
+            openssl dgst -sha256 -sign <(echo "${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}") | \
+            openssl base64 -e -A | tr '+/' '-_' | tr -d '=')
+          JWT="${HEADER_B64}.${PAYLOAD_B64}.${SIGNATURE}"
+          
+          # Get installation ID
+          INSTALLATION_ID=$(curl -s -H "Authorization: Bearer ${JWT}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/orgs/hackforla/installation" | jq -r '.id')
+          
+          if [[ "$INSTALLATION_ID" == "null" ]] || [[ -z "$INSTALLATION_ID" ]]; then
+            echo "Error: Could not get installation ID"
+            echo "Make sure the GitHub App is installed on the organization"
+            exit 1
+          fi
+          
+          echo "Installation ID: $INSTALLATION_ID"
+          
+          # Get installation access token
+          TOKEN_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${JWT}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens")
+          
+          APP_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.token')
+          
+          if [[ "$APP_TOKEN" == "null" ]] || [[ -z "$APP_TOKEN" ]]; then
+            echo "Error: Could not generate access token"
+            echo "Response: $TOKEN_RESPONSE"
+            exit 1
+          fi
+          
+          # Mask token in logs
+          echo "::add-mask::$APP_TOKEN"
+          
+          # Output token
+          echo "token=$APP_TOKEN" >> $GITHUB_OUTPUT
+          echo "Token generated successfully"
 
       - name: Verify token generation
         run: |
