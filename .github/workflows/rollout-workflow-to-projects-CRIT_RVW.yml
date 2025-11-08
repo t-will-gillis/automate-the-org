@@ -6,6 +6,10 @@ on:
       target_repo:
         description: 'Provide the name of the target repo, e.g. "org/project"'
         required: true
+      source_repo:
+        description: 'Location of source files and automation trigger'
+        required: true
+        default: 'hackforla/automate-the-org'
       rollout_branch:
         description: 'Branch name created for PR for rollout'
         required: false
@@ -14,6 +18,10 @@ on:
         description: 'Template file name (must exist in .github/templates/)'
         required: true
         default: 'pr_template_add_update.md'
+      github_app_name:
+        description: 'GitHub App name/slug'
+        required: true
+        default: 'hfla-workflow-rollout'
       dry_run:
         description: 'Dry-run mode: preview changes without creating PRs'
         type: boolean
@@ -50,10 +58,10 @@ jobs:
           JWT="${HEADER_B64}.${PAYLOAD_B64}.${SIGNATURE}"
           
           # Get installation ID
+          ORG_NAME=$(echo "${{ github.event.inputs.source_repo }}" | cut -d'/' -f1)      
           INSTALLATION_ID=$(curl -s -H "Authorization: Bearer ${JWT}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/orgs/hackforla/installation" | jq -r '.id')
-          
+            "https://api.github.com/orgs/${ORG_NAME}/installation" | jq -r '.id')
           if [[ "$INSTALLATION_ID" == "null" ]] || [[ -z "$INSTALLATION_ID" ]]; then
             echo "Error: Could not get installation ID"
             echo "Make sure the GitHub App is installed on the organization"
@@ -86,14 +94,15 @@ jobs:
       - name: Prepare variables
         run: |
           echo "TARGET_REPO=${{ github.event.inputs.target_repo }}" >> $GITHUB_ENV
+          echo "SOURCE_REPO=${{ github.event.inputs.source_repo }}" >> $GITHUB_ENV
           echo "ROLLOUT_BRANCH=${{ github.event.inputs.rollout_branch }}" >> $GITHUB_ENV
           echo "TEMPLATE_FILE=${{ github.event.inputs.template_file }}" >> $GITHUB_ENV
           echo "DRY_RUN=${{ github.event.inputs.dry_run }}" >> $GITHUB_ENV
 
-      - name: Checkout the source workflows repo
+      - name: Checkout the source workflow repo
         uses: actions/checkout@v5
         with:
-          repository: hackforla/automate-the-org
+          repository: ${{ github.event.inputs.source_repo }}
           path: central
 
       - name: Extract rollout config from PR template
@@ -178,126 +187,124 @@ jobs:
           echo "WORKFLOW_NAME=$WORKFLOW_NAME" >> $GITHUB_ENV
           echo "Workflow name: $WORKFLOW_NAME"
 
-      - name: Rollout to each repo
+      - name: Rollout to target repo
         env:
           APP_TOKEN: ${{ steps.generate-app-token.outputs.token }} 
         run: |
-          IFS=',' read -ra REPOS <<< "$TARGET_REPO"
-          for REPO in "${REPOS[@]}"; do
-            echo "Processing repo: $REPO . . ."
-            export GH_TOKEN="$APP_TOKEN"
+          REPO="$TARGET_REPO"
+          echo "Processing repo: $REPO . . ."
+          export GH_TOKEN="$APP_TOKEN"
+          
+          # Get default branch
+          DEFAULT_BRANCH=$(gh api repos/$REPO --jq '.default_branch'\
+            -H "Authorization: token $GH_TOKEN")
+          echo "Default branch: $DEFAULT_BRANCH"
+
+          # Only in 'DRY_RUN' mode
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "[DRY-RUN] Would clone repo: $REPO (branch: $DEFAULT_BRANCH)"
+            echo "[DRY-RUN] Would create branch: $ROLLOUT_BRANCH"
+            echo "[DRY-RUN] Would copy workflow file: $WORKFLOW_SRC -> $WORKFLOW_DEST"
             
-            # Get default branch
-            DEFAULT_BRANCH=$(gh api repos/$REPO --jq '.default_branch'\
-              -H "Authorization: token $GH_TOKEN")
-            echo "Default branch: $DEFAULT_BRANCH"
-
-            # Only in 'DRY_RUN' mode
-            if [ "$DRY_RUN" = "true" ]; then
-              echo "[DRY-RUN] Would clone repo: $REPO (branch: $DEFAULT_BRANCH)"
-              echo "[DRY-RUN] Would create branch: $ROLLOUT_BRANCH"
-              echo "[DRY-RUN] Would copy workflow file: $WORKFLOW_SRC -> $WORKFLOW_DEST"
-              
-              if [ -s config_files.json ]; then
-                cat config_files.json | jq -c '.[]' | while read -r item; do
-                  SRC=$(echo "$item" | jq -r '.src')
-                  DEST=$(echo "$item" | jq -r '.dest')
-                  echo "[DRY-RUN] Would copy config file: $SRC -> $DEST"
-                done
-              else
-                echo "[DRY-RUN] No config files listed."
-              fi
-
-              echo "[DRY-RUN] Would commit changes: Install ${WORKFLOW_NAME} and project-specific files"
-              echo "[DRY-RUN] Would push branch: $ROLLOUT_BRANCH"
-              
-              # read PR template for preview
-              PR_BODY=$(cat "central/.github/templates/$TEMPLATE_FILE")
-              
-              echo "[DRY-RUN] PR body preview:"
-              echo "----------------------------------"
-              echo "$PR_BODY"
-              echo "----------------------------------"
-
-              echo "[DRY-RUN] Would create PR titled: Install workflow: ${WORKFLOW_NAME}"
-              continue
-            fi
-
-            # Clone the target repository
-            echo "Cloning repository: $REPO (branch: $DEFAULT_BRANCH)"
-            
-            if ! git clone --depth 1 --branch "$DEFAULT_BRANCH" \
-              "https://x-access-token:${APP_TOKEN}@github.com/${REPO}" temp-repo; then
-              echo "Error: Failed to clone repository $REPO"
-              exit 1
-            fi
-            
-            cd temp-repo
-            
-            # Configure git to use token for authenticated operations
-            git config user.name "Central Rollout Bot"
-            git config user.email "rollout-bot@hackforla.org"
-            git remote set-url origin "https://x-access-token:${APP_TOKEN}@github.com/${REPO}"
-            
-            # Create rollout branch is does not exist
-            if git ls-remote --heads origin "$ROLLOUT_BRANCH" | grep -q "$ROLLOUT_BRANCH"; then
-              echo "Checking out existing branch: $ROLLOUT_BRANCH"
-              git fetch origin "$ROLLOUT_BRANCH"
-              git checkout "$ROLLOUT_BRANCH"
-              git pull origin "$ROLLOUT_BRANCH"
-            else
-              echo "Creating new branch: $ROLLOUT_BRANCH"
-              git checkout -b "$ROLLOUT_BRANCH"
-            fi
-
-            # Copy workflow file using workspace-relative path
-            # $WORKFLOW_SRC is now relative to $GITHUB_WORKSPACE
-            mkdir -p "$(dirname "$WORKFLOW_DEST")"
-            cp "$GITHUB_WORKSPACE/$WORKFLOW_SRC" "$WORKFLOW_DEST"
-            echo "Copied workflow: $WORKFLOW_SRC -> $WORKFLOW_DEST"
-
-            # Copy project-specific config files using resolved paths
-            if [ -s "$GITHUB_WORKSPACE/config_files.json" ]; then
-              cat "$GITHUB_WORKSPACE/config_files.json" | jq -c '.[]' | while read -r item; do
+            if [ -s config_files.json ]; then
+              cat config_files.json | jq -c '.[]' | while read -r item; do
                 SRC=$(echo "$item" | jq -r '.src')
-                DST=$(echo "$item" | jq -r '.dest')
-                
-                # Verify source file exists
-                if [[ ! -f "$GITHUB_WORKSPACE/$SRC" ]]; then
-                  echo "Warning: Config file not found: $SRC"
-                  continue
-                fi
-                
-                mkdir -p "$(dirname "$DST")"
-                cp "$GITHUB_WORKSPACE/$SRC" "$DST"
-                echo "Copied config: $SRC -> $DST"
+                DEST=$(echo "$item" | jq -r '.dest')
+                echo "[DRY-RUN] Would copy config file: $SRC -> $DEST"
               done
+            else
+              echo "[DRY-RUN] No config files listed."
             fi
 
-            # Commit and push if there are changes
-            git add .
-            if git diff --staged --quiet; then
-              echo "No changes to commit - workflow already up to date"
-              cd ..
-              rm -rf temp-repo
-              continue
-            fi
-            git commit -m "Install ${WORKFLOW_NAME} and project-specific files"
+            echo "[DRY-RUN] Would commit changes: Install ${WORKFLOW_NAME} and project-specific files"
+            echo "[DRY-RUN] Would push branch: $ROLLOUT_BRANCH"
+            
+            # read PR template for preview
+            PR_BODY=$(cat "central/.github/templates/$TEMPLATE_FILE")
+            
+            echo "[DRY-RUN] PR body preview:"
+            echo "----------------------------------"
+            echo "$PR_BODY"
+            echo "----------------------------------"
 
-            # Force push rollout branch
-            git push origin "$ROLLOUT_BRANCH" --force
+            echo "[DRY-RUN] Would create PR titled: Install workflow: ${WORKFLOW_NAME}"
+            exit 0
+          fi
 
-            # Create Pull Request
-            PR_BODY=$(cat "../central/.github/templates/$TEMPLATE_FILE")
+          # Clone the target repository
+          echo "Cloning repository: $REPO (branch: $DEFAULT_BRANCH)"
+          
+          if ! git clone --depth 1 --branch "$DEFAULT_BRANCH" \
+            "https://x-access-token:${APP_TOKEN}@github.com/${REPO}" temp-repo; then
+            echo "Error: Failed to clone repository $REPO"
+            exit 1
+          fi
+          
+          cd temp-repo
+          
+          # Configure git to use token for authenticated operations
+          ORG_NAME=$(echo "$SOURCE_REPO" | cut -d'/' -f1)
+          git config user.name "${{ github.event.inputs.github_app_name }}[bot]"
+          git config user.email "${{ github.event.inputs.github_app_name }}@${ORG_NAME}.org"
+          
+          # Create rollout branch is does not exist
+          if git ls-remote --heads origin "$ROLLOUT_BRANCH" | grep -q "$ROLLOUT_BRANCH"; then
+            echo "Checking out existing branch: $ROLLOUT_BRANCH"
+            git fetch origin "$ROLLOUT_BRANCH"
+            git checkout "$ROLLOUT_BRANCH"
+            git pull origin "$ROLLOUT_BRANCH"
+          else
+            echo "Creating new branch: $ROLLOUT_BRANCH"
+            git checkout -b "$ROLLOUT_BRANCH"
+          fi
 
-            gh pr create \
-              --repo $REPO \
-              --head "$ROLLOUT_BRANCH" \
-              --base "$DEFAULT_BRANCH" \
-              --title "Install workflow: ${WORKFLOW_NAME}" \
-              --body "$PR_BODY"
+          # Copy workflow file using workspace-relative path
+          # $WORKFLOW_SRC is now relative to $GITHUB_WORKSPACE
+          mkdir -p "$(dirname "$WORKFLOW_DEST")"
+          cp "$GITHUB_WORKSPACE/$WORKFLOW_SRC" "$WORKFLOW_DEST"
+          echo "Copied workflow: $WORKFLOW_SRC -> $WORKFLOW_DEST"
 
-            # Cleanup for next repo
+          # Copy project-specific config files using resolved paths
+          if [ -s "$GITHUB_WORKSPACE/config_files.json" ]; then
+            cat "$GITHUB_WORKSPACE/config_files.json" | jq -c '.[]' | while read -r item; do
+              SRC=$(echo "$item" | jq -r '.src')
+              DST=$(echo "$item" | jq -r '.dest')
+              
+              # Verify source file exists
+              if [[ ! -f "$GITHUB_WORKSPACE/$SRC" ]]; then
+                echo "Warning: Config file not found: $SRC"
+                continue
+              fi
+              
+              mkdir -p "$(dirname "$DST")"
+              cp "$GITHUB_WORKSPACE/$SRC" "$DST"
+              echo "Copied config: $SRC -> $DST"
+            done
+          fi
+
+          # Commit and push if there are changes
+          git add .
+          if git diff --staged --quiet; then
+            echo "No changes to commit - workflow already up to date"
             cd ..
             rm -rf temp-repo
-          done
+            exit 0
+          fi
+          git commit -m "Install ${WORKFLOW_NAME} and project-specific files"
+
+          # Force push rollout branch
+          git push origin "$ROLLOUT_BRANCH" --force
+
+          # Create Pull Request
+          PR_BODY=$(cat "../central/.github/templates/$TEMPLATE_FILE")
+
+          gh pr create \
+            --repo $REPO \
+            --head "$ROLLOUT_BRANCH" \
+            --base "$DEFAULT_BRANCH" \
+            --title "Install workflow: ${WORKFLOW_NAME}" \
+            --body "$PR_BODY"
+
+          # Cleanup
+          cd ..
+          rm -rf temp-repo
