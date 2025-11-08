@@ -1,6 +1,41 @@
 const { logger } = require('./format-log-messages');
 
 /**
+ * Default returns the current date and time in Los Angeles time (PST/PDT)
+ * formatted as a string.
+ *
+ * The output format is: `YYYY/MM/DD HH:MM TZ`, where `TZ` is either
+ * PST or PDT depending on daylight saving time.
+ *
+ * @param {String} datetime                         - The date and time string from the event
+ * @param {String} [timezone='America/Los_Angeles'] - Optional IANA timezone string
+ * @returns {String}                                - Formatted date and time string for timezone
+ */
+function setLocalTime(datetime, timezone = 'America/Los_Angeles') {
+  // Validate timezone input
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: timezone });
+  } catch (e) {
+    logger.warn(`Invalid timezone specified: '${timezone}', defaulting to 'America/Los_Angeles'`);
+    timezone = 'America/Los_Angeles';
+  }
+
+  // Create notification time string in PST/PDT
+  return new Date(datetime).toLocaleString("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZoneName: "short",
+  });
+}
+
+
+
+/**
  * Function that returns the timeline of an issue
  * @param {Object} github                 - GitHub object from actions/github-script
  * @param {Object} context                - context object from actions/github-script
@@ -40,4 +75,4 @@ async function getIssueTimeline(github, context, issueNum) {
   return timelineArray;
 }
 
-module.exports = getIssueTimeline;
+module.exports = { setLocalTime, getIssueTimeline };

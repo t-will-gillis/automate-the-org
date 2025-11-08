@@ -49,9 +49,9 @@ async function run() {
       defaults,
       overrides: { dryRun },
       requiredFields: [
-        'timeframes.updatedByDays',
-        'timeframes.commentByDays',
-        'timeframes.inactiveByDays',
+        'timeframes.recentlyUpdatedByDays',
+        'timeframes.needsUpdatingByDays',
+        'timeframes.isInactiveByDays',
         'timeframes.upperLimitDays',
         'projectBoard.targetStatus',
         'projectBoard.questionsStatus',
@@ -118,10 +118,10 @@ async function run() {
 function getDefaultConfigs() {
   return {
     timeframes: {
-      updatedByDays: 3,      // Issues updated within this many days are considered current
-      commentByDays: 7,      // Issues not updated for this many days are prompted for an update
-      inactiveByDays: 14,    // Issues not updated for this many days are marked as inactive
-      upperLimitDays: 35,    // Bot comments older than this are not checked (to reduce API calls)
+      recentlyUpdatedByDays: 3, // Issues updated within this many days are considered 'recentlyUpdated'
+      needsUpdatingByDays: 7,   // Issues not updated for this many days are prompted as 'needsUpdating'
+      isInactiveByDays: 14,     // Issues not updated for this many days are marked as 'isInactive'
+      upperLimitDays: 35,       // Bot comments older than this are not checked (to reduce API calls)
     },
     
     projectBoard: {

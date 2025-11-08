@@ -18,10 +18,10 @@
 # Time thresholds (in days)
 # ==============================================================================
 timeframes:
-
-  updatedByDays: 3     # Issues updated within this many days are considered current
-  commentByDays: 7     # Issues not updated for this many days are prompted for update
-  inactiveByDays: 14   # Issues not updated for this many days are marked as inactive
+  # Note: the next three values must be min to max, recentlyUpdated < needsUpdating < isInactive
+  recentlyUpdatedByDays: 3    # Issues updated within this many days are considered current
+  needsUpdatingByDays: 7      # Issues not updated for this many days are prompted for update
+  isInactiveByDays: 14        # Issues not updated for this many days are marked as inactive
 
   upperLimitDays: 35   # See explanation following and "Bot configuration" below
   # To reduce issue clutter, this workflow includes a GraphQL mutation that iterates 
@@ -101,9 +101,9 @@ labels:
 # ==============================================================================
 # Bot configuration- If needed
 # ==============================================================================
-# Relevant to "timeframes.upperLimitDays" setting above.
-# Bot usernames whose comments should be minimized when they become outdated.
-# Comments are minimized if they're between 'commentByDays' and 'upperLimitDays' old
+# Relevant to "timeframes.upperLimitDays" setting above: Bot usernames whose 
+# comments should be minimized when they become outdated. Comments are minimized 
+# if they're between 'needsUpdatingByDays' and 'upperLimitDays' old
 bots:
   - "github-actions[bot]"
   - "HackforLABot"
@@ -112,7 +112,7 @@ bots:
 
 
 # ==============================================================================
-# Bot comment template
+# Bot comment template - Do not change
 # ==============================================================================
 # Template for the comment posted to issues needing updates
 # Variables used by template:
@@ -121,35 +121,11 @@ bots:
 #   ${statusUpdated}      - The "updated" label name from your label directory
 #   ${statusHelpWanted}   - The "help wanted" label name from your label directory
 #   ${questionsStatus}    - The "questions" status on your Project Board (e.g., "Questions / In Review")
-#   ${teamSlackChannel}   - The name of your team's Slack Channel
 #   ${cutoffTime}         - The formatted timestamp of the issue's last update
 #
 # You can use Markdown formatting to edit the template found at:
 
 botCommentTemplatePath: ".github/workflow-configs/templates/add-update-instructions-template.md"   # Do not change
-
-# commentTemplate: |
-#   Hello ${assignees}!
-  
-#   Please add an update comment using the below template (even if you have a pull request). Afterwards, remove 
-#   the `${label}` label and add the `${statusUpdated}` label.
-
-#   1. Progress: "What is the current status of your issue? What have you completed and what is left to do?"
-#   2. Blockers: "Explain any difficulties or errors encountered."
-#   3. Availability: "How much time will you have this week to work on this issue?"
-#   4. ETA: "When do you expect this issue to be completed?"
-#   5. Pictures (optional): "Add any pictures of the visual changes made to the site so far."
-
-#   If you need help, be sure to either: 1) place your issue in the "${questionsStatus}" status column of the 
-#   Project Board and ask for help at your next meeting; 2) put a `${statusHelpWanted}` label on your issue 
-#   and pull request; or 3) put up a request for assistance on the team's <teamSlackChannel> Slack channel.
-
-#   Please note that including your questions in the issue comments- along with screenshots, if applicable- 
-#   will help us to help you. [Here](https://github.com/hackforla/website/issues/1619#issuecomment-897315561) and [here](https://github.com/hackforla/website/issues/1908#issuecomment-877908152) are examples of well-formed questions.
-
-#   <sub>You are receiving this comment because your last comment was before ${cutoffTime}.</sub>
-  
-#   Thanks for being part of HfLA!
 
 
 
