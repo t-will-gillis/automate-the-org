@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs: Troubleshooting guide
 
 ## [Unreleased]
+_No unreleased changes yet._
+
+## v0.4.2
+2025-11-09
+
 - fix: minor bug fix 
 
 
