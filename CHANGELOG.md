@@ -16,6 +16,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 _No unreleased changes yet._
 
+## v0.4.0
+2025-11-08
+
+- Minor release
+- feat: Changed final directory structure
+- feat: Add `rollout-project-label-directory.yml`
+
+## v0.3.6
+2025-11-05
+
+- time bugs
+
+## v0.3.5
+2025-11-05
+
+- bug: still are problems
+
+## v0.3.4
+2025-11-05
+
+- bug: fix logic in add-update-label-weekly
+
+## v0.3.3
+2025-11-05
+
+- bug: queryIssueInfo
+
+## v0.3.2
+2025-11-05
+
+- bug: Fix for all website test
+
+## v0.3.1
+2025-11-05
+
+- bug: remove old reference
+
+## v0.3.0
+2025-11-05
+
+- Testing mode against Website
+- Comments specify time of last activity, label key
+
 ## v0.2.0
 2025-11-01
 
