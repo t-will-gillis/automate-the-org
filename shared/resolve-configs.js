@@ -52,7 +52,7 @@ function resolveConfigs({
     try {
     const botCommentTemplatePath =
       config.botCommentTemplatePath || 
-      '.github/workflow-configs/templates/add-update-instructions-template.md';
+      'github-actions/workflow-configs/templates/add-update-instructions-template.md';
 
     const fullPathTemplate = path.join(projectRepoPath, botCommentTemplatePath);
 
