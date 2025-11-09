@@ -67,7 +67,7 @@ async function resolveLabels({
 
   for (let labelKey of allLabelKeys) {
     if (labelDirectory[labelKey]) {
-      resolvedLabels[labelKey] = labelDirectory[labelKey];
+      resolvedLabels[labelKey] = labelDirectory[labelKey][0];
       logger.debug(`Mapped ${labelKey}: "${labelDirectory[labelKey]}"`);
     } else if (optionalLabelKeys.includes(labelKey)) {
       logger.warn(`Optional ${labelKey} not found - skipping`);
