@@ -8,7 +8,7 @@
 const { logger } = __nccwpck_require__(2515);
 const queryIssueInfo = __nccwpck_require__(1563);
 const findLinkedIssue = __nccwpck_require__(8733);
-const getIssueTimeline = __nccwpck_require__(5103);
+const { setLocalTime, getIssueTimeline } = __nccwpck_require__(5616);
 const { addLabels, removeLabels } = __nccwpck_require__(4603);
 const minimizeIssueComment = __nccwpck_require__(7688);
 
@@ -19,23 +19,25 @@ var labels;
 var config;
 
 // Time cutoff variables (set in main function based on config)
-var updatedByDays;
-var commentByDays;
-var inactiveByDays;
+var recentlyUpdatedByDays;
+var needsUpdatingByDays;
+var isInactiveByDays;
 var upperLimitDays;
-var updatedCutoffTime;
-var toUpdateCutoffTime;
-var inactiveCutoffTime;
+
+var recentlyUpdatedCutoffTime;
+var needsUpdatingCutoffTime;
+var isInactiveCutoffTime;
 var upperLimitCutoffTime;
 
 
 
 /**
- * The main function, which retrieves issues from a specific column in a specific project, before examining
- * the timeline of each issue for outdatedness. An update to an issue is either 1.) a comment by the assignee,
- * or 2.) assigning an assignee to the issue. If the last update was not between 7 to 14 days ago, apply the
- * appropriate label and request an update. However, if the assignee has submitted a PR that will fix the issue
- * regardless of when, all update-related labels should be removed.
+ * The main function, which retrieves issues from a specific column in a specific project, 
+ * before examining the timeline of each issue for outdatedness. An update to an issue is 
+ * either 1.) a comment by the assignee, or 2.) assigning an assignee to the issue. If the 
+ * last update was not between 7 to 14 days ago, apply the appropriate label and request an 
+ * update. However, if the assignee has submitted a PR that will fix the issue regardless 
+ * of when, all update-related labels should be removed.
  * @param {Object} github     - GitHub object from actions/github-script
  * @param {Object} context    - context object from actions/github-script
  * @param {Object} labels     - Resolved label mappings (label keys to label names)
@@ -48,16 +50,16 @@ async function main({ github: g, context: c, labels: l, config: cfg }) {
   config = cfg;
 
   // Calculate cutoff times from config settings
-  updatedByDays = config.timeframes.updatedByDays;
-  commentByDays = config.timeframes.commentByDays;
-  inactiveByDays = config.timeframes.inactiveByDays;
+  recentlyUpdatedByDays = config.timeframes.recentlyUpdatedByDays;
+  needsUpdatingByDays = config.timeframes.needsUpdatingByDays;
+  isInactiveByDays = config.timeframes.isInactiveByDays;
   upperLimitDays = config.timeframes.upperLimitDays;
 
   // Set global cutoff time vars from config settings, adding/subtracting 10 mins to avoid edge cases
   const msPerMinute = 60 * 1000;
-  updatedCutoffTime = new Date(Date.now() - updatedByDays * 24 * 60 * msPerMinute);
-  toUpdateCutoffTime = new Date(Date.now() - (commentByDays * 24 * 60 + 10) * msPerMinute);
-  inactiveCutoffTime = new Date(Date.now() - inactiveByDays * 24 * 60 * msPerMinute);
+  recentlyUpdatedCutoffTime = new Date(Date.now() - recentlyUpdatedByDays * 24 * 60 * msPerMinute);
+  needsUpdatingCutoffTime = new Date(Date.now() - (needsUpdatingByDays * 24 * 60 + 10) * msPerMinute);
+  isInactiveCutoffTime = new Date(Date.now() - isInactiveByDays * 24 * 60 * msPerMinute);
   upperLimitCutoffTime = new Date(Date.now() - (upperLimitDays * 24 * 60 - 10) * msPerMinute);
 
   // Retrieve all issue numbers from a repo
@@ -181,10 +183,10 @@ function isTimelineOutdated(timeline, issueNum, assignees) {
       lastAssignedTimestamp = eventTimestamp;
     }
 
-    // If this event is older than 'toUpdateCutoffTime', less than the 'upperLimitCutoffTime', AND this event is a comment by the GitHub Actions Bot, then add comment's 'node_id' to list of outdated comments to minimize later.
+    // If this event is older than 'needsUpdatingCutoffTime', less than the 'upperLimitCutoffTime', AND this event is a comment by the GitHub Actions Bot, then add comment's 'node_id' to list of outdated comments to minimize later.
     if (
       isMomentRecent(eventObj.created_at, upperLimitCutoffTime) &&
-      !isMomentRecent(eventObj.created_at, toUpdateCutoffTime) &&
+      !isMomentRecent(eventObj.created_at, needsUpdatingCutoffTime) &&
       eventType === 'commented' &&
       isCommentByBot(eventObj)
     ) { 
@@ -203,27 +205,30 @@ function isTimelineOutdated(timeline, issueNum, assignees) {
     ? [lastCommentTimestamp, 'Assignee\'s last comment']
     : [lastAssignedTimestamp, 'Assignee\'s assignment'];
 
-  // If 'lastActivityTimestamp' more recent than 'updatedCutoffTime', keep updated label and remove others
-  if (isMomentRecent(lastActivityTimestamp, updatedCutoffTime)) {
-    logger.info(`Issue #${issueNum}: ${lastActivityType} sooner than ${updatedByDays} days ago, retain '${labels.statusUpdated}' label if exists `);
-    return { result: false, labels: labels.statusUpdated, cutoff: updatedCutoffTime }
+  lastActivityTimestamp = setLocalTime(lastActivityTimestamp);
+  logger.debug(`Issue #${issueNum}: ${lastActivityType} was at ${lastActivityTimestamp}`);
+
+  // If 'lastActivityTimestamp' more recent than 'recentlyUpdatedCutoffTime', keep updated label and remove others
+  if (isMomentRecent(lastActivityTimestamp, recentlyUpdatedCutoffTime)) {
+    logger.info(`Issue #${issueNum}: ${lastActivityType} sooner than ${recentlyUpdatedByDays} days ago, retain 'statusUpdated' label if exists`);
+    return { result: false, labels: labels.statusUpdated, cutoff: recentlyUpdatedCutoffTime }
   }
 
-  // If 'lastActivityTimestamp' more recent than 'toUpdateCutoffTime', remove all labels
-  if (isMomentRecent(lastActivityTimestamp, updatedCutoffTime)) {
-    logger.info(`Issue #${issueNum}: ${lastActivityType} between ${updatedByDays} and ${commentByDays} days ago, no update-related labels`)
-    return { result: false, labels: '', cutoff: updatedCutoffTime} 
+  // If 'lastActivityTimestamp' more recent than 'needsUpdatingCutoffTime', remove all labels
+  if (isMomentRecent(lastActivityTimestamp, needsUpdatingCutoffTime)) {
+    logger.info(`Issue #${issueNum}: ${lastActivityType} between ${recentlyUpdatedByDays} and ${needsUpdatingByDays} days ago, no update-related labels`)
+    return { result: false, labels: '', cutoff: needsUpdatingCutoffTime} 
   }
 
-  // If 'lastActivityTimestamp' not yet older than the 'inactiveCutoffTime', issue needs update label
-  if (isMomentRecent(lastActivityTimestamp, inactiveCutoffTime)) { 
-    logger.info(`Issue #${issueNum}: ${lastActivityType} between ${commentByDays} and ${inactiveByDays} days ago, use '${labels.statusInactive1}' label`)
-    return { result: true, labels: labels.statusInactive1, cutoff: toUpdateCutoffTime }
+  // If 'lastActivityTimestamp' not yet older than the 'isInactiveCutoffTime', issue needs update label
+  if (isMomentRecent(lastActivityTimestamp, isInactiveCutoffTime)) { 
+    logger.info(`Issue #${issueNum}: ${lastActivityType} between ${needsUpdatingByDays} and ${isInactiveByDays} days ago, use 'statusInactive1' label`)
+    return { result: true, labels: labels.statusInactive1, cutoff: needsUpdatingCutoffTime }
   }
 
-  // If 'lastActivityTimestamp' is older than the 'inactiveCutoffTime', issue is outdated and needs inactive label
-  logger.info(`Issue #${issueNum}: ${lastActivityType} older than ${inactiveByDays} days ago, use '${labels.statusInactive2}' label`)
-  return { result: true, labels: labels.statusInactive2, cutoff: inactiveCutoffTime }
+  // If 'lastActivityTimestamp' is older than the 'isInactiveCutoffTime', issue is outdated and needs inactive label
+  logger.info(`Issue #${issueNum}: ${lastActivityType} older than ${isInactiveByDays} days ago, use 'statusInactive2' label`)
+  return { result: true, labels: labels.statusInactive2, cutoff: isInactiveCutoffTime }
 }
 
 
@@ -299,12 +304,8 @@ function createAssigneeString(assignees) {
 
 // Populate default comment template with corresponding values
 function formatComment(assignees, labelString, cutoffTime) {
-  const options = {
-    dateStyle: 'full',
-    timeStyle: 'short',
-    timeZone: config.timezone || 'America/Los_Angeles',
-  };
-  const cutoffTimeString = cutoffTime.toLocaleString('en-US', options);
+  // Format cutoff time
+  const cutoffTimeString = setLocalTime(cutoffTime);
   
   let completedInstructions = config.commentTemplate
     .replace(/\$\{assignees\}/g, assignees)
@@ -34480,56 +34481,6 @@ module.exports = { logger };
 
 /***/ }),
 
-/***/ 5103:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-const { logger } = __nccwpck_require__(2515);
-
-/**
- * Function that returns the timeline of an issue
- * @param {Object} github                 - GitHub object from actions/github-script
- * @param {Object} context                - context object from actions/github-script
- * @param {Number} issueNum               - the issue number
- * @returns {Array<Object>} timelineArray - an array containing the timeline of issue events
- */
-async function getIssueTimeline(github, context, issueNum) {
-
-  let timelineArray = [];
-  let page = 1;
-
-  while (true) {
-    try {
-      // https://docs.github.com/en/rest/issues/timeline?apiVersion=2022-11-28#list-timeline-events-for-an-issue
-      const results = await github.request('GET /repos/{owner}/{repo}/issues/{issue_number}/timeline', {
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        issue_number: issueNum,
-        per_page: 100,
-        page: page,
-      });
-
-      // If the API call returns an empty array, break out of loop- there is no additional data.
-      // Else if data is returned, push it to `timelineArray` and increase the page number (`page`)
-      if (!results.data.length) {
-        break;
-      } else {
-        timelineArray.push(...results.data);
-        page++;
-      }
-    } catch (err) {
-      logger.error(`Error fetching issue timeline (page ${page}):`, err);
-      break;
-    }
-  }
-
-  return timelineArray;
-}
-
-module.exports = getIssueTimeline;
-
-
-/***/ }),
-
 /***/ 7688:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -34761,7 +34712,7 @@ function resolveConfigs({
     try {
     const botCommentTemplatePath =
       config.botCommentTemplatePath || 
-      '.github/workflow-configs/templates/add-update-instructions-template.md';
+      'github-actions/workflow-configs/templates/add-update-instructions-template.md';
 
     const fullPathTemplate = path.join(projectRepoPath, botCommentTemplatePath);
 
@@ -34948,6 +34899,14 @@ async function resolveLabels({
 }
 
 module.exports = { resolve:resolveLabels };
+
+/***/ }),
+
+/***/ 5616:
+/***/ ((module) => {
+
+module.exports = eval("require")("../shared/get-issue-timeline");
+
 
 /***/ }),
 
@@ -36883,7 +36842,7 @@ async function run() {
     
     // Get action inputs
     const token = core.getInput('github-token', { required: true });
-    const configPath = core.getInput('config-path') || '.github/workflow-configs/add-update-label-weekly-config.yml';
+    const configPath = core.getInput('config-path') || 'github-actions/workflow-configs/add-update-label-weekly-config.yml';
     const dryRunInput = core.getInput('dry-run') || 'false';
     const dryRun = (dryRunInput).toLowerCase() === 'true';
     dryRun && logger.warn(`Running in DRY-RUN mode: No changes will be applied`);
@@ -36914,9 +36873,9 @@ async function run() {
       defaults,
       overrides: { dryRun },
       requiredFields: [
-        'timeframes.updatedByDays',
-        'timeframes.commentByDays',
-        'timeframes.inactiveByDays',
+        'timeframes.recentlyUpdatedByDays',
+        'timeframes.needsUpdatingByDays',
+        'timeframes.isInactiveByDays',
         'timeframes.upperLimitDays',
         'projectBoard.targetStatus',
         'projectBoard.questionsStatus',
@@ -36926,7 +36885,7 @@ async function run() {
     logger.log(``);
     
     // Determine label directory path from config
-    const labelDirectoryPath = config.labelDirectoryPath || '.github/workflow-configs/label-directory.yml';
+    const labelDirectoryPath = config.labelDirectoryPath || 'github-actions/workflow-configs/_data/label-directory.yml';
     
     // Resolve label keys to label names
     logger.step(`Resolving labels...`);
@@ -36983,10 +36942,10 @@ async function run() {
 function getDefaultConfigs() {
   return {
     timeframes: {
-      updatedByDays: 3,      // Issues updated within this many days are considered current
-      commentByDays: 7,      // Issues not updated for this many days are prompted for an update
-      inactiveByDays: 14,    // Issues not updated for this many days are marked as inactive
-      upperLimitDays: 35,    // Bot comments older than this are not checked (to reduce API calls)
+      recentlyUpdatedByDays: 3, // Issues updated within this many days are considered 'recentlyUpdated'
+      needsUpdatingByDays: 7,   // Issues not updated for this many days are prompted as 'needsUpdating'
+      isInactiveByDays: 14,     // Issues not updated for this many days are marked as 'isInactive'
+      upperLimitDays: 35,       // Bot comments older than this are not checked (to reduce API calls)
     },
     
     projectBoard: {
@@ -37013,7 +36972,7 @@ function getDefaultConfigs() {
     
     commentTemplate: getDefaultCommentTemplate(),
     
-    labelDirectoryPath: '.github/workflow-configs/label-directory.yml',
+    labelDirectoryPath: 'github-actions/workflow-configs/_data/label-directory.yml',
   };
 }
 
