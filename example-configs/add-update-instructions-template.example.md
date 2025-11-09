@@ -1,5 +1,5 @@
 <!-- Message template used with the "Add Update Label Weekly" workflow -->
-<!-- Copy this file to: `.github/workflow-configs/templates/add-update-instructions-template.md` -->
+<!-- This file installed to: `github-actions/workflow-configs/templates/add-update-instructions-template.md` -->
 
 <!-- CUSTOMIZE <teamSlackChannel>. The automation will replace the other variables during runtime  -->
 

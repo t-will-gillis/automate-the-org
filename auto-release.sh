@@ -9,7 +9,7 @@ PACKAGE_JSON="package.json"
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 # --- 1. Get last git tag ---
-LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+LAST_TAG=$(git tag --sort=-creatordate | head -n1 || echo "v0.0.0")
 
 # Extract major.minor.patch numbers
 VERSION_REGEX="v([0-9]+)\.([0-9]+)\.([0-9]+)"
