@@ -32,7 +32,7 @@ workflow-configs/
 ├── example-configs/                    # Example configuration files
 │   ├── add-update-label-weekly-config.example.yml
 │   ├── add-update-label-weekly.example.yml
-│   └── label-directory.example.yml     # MAY BE REMOVED
+│   └── label-directory.example.yml     # DO NOT USE
 │
 ├── package.json                        # Dependencies for all actions
 ├── 

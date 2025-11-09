@@ -9,11 +9,9 @@ workflow_file:
 
 config_files:
   - src: ../../example-configs/add-update-label-weekly-config.example.yml
-    dest: .github/workflow-configs/add-update-label-weekly-config.yml
-  - src: ../../example-configs/label-directory.example.yml
-    dest: .github/workflow-configs/label-directory.yml
+    dest: github-actions/workflow-configs/add-update-label-weekly-config.yml
   - src: ../../example-configs/add-update-instructions-template.example.md
-    dest: .github/workflow-configs/templates/add-update-instructions-template.md
+    dest: github-actions/workflow-configs/templates/add-update-instructions-template.md
 ```
 -->
 
@@ -21,16 +19,23 @@ config_files:
 
 This PR adds the "Add Update Label Weekly" GitHub Actions workflow to your project.
 
-### Files included
+
+### Files installed by this PR
 
 - **Workflow file**:
   - `.github/workflows/add-update-label-weekly.yml` 
 - **Configuration files**:
-  - `.github/workflow-configs/add-update-label-weekly-config.yml`
-  - `.github/workflow-configs/label-directory.yml`
-  - `.github/workflow-configs/templates/add-update-instructions-template.md`
+  - `github-actions/workflow-configs/add-update-label-weekly-config.yml`
+  - `github-actions/workflow-configs/templates/add-update-instructions-template.md`
 
-### What This Workflow Does
+### File installed by a separate PR
+The following file is installed by a separate PR. It is shared by all of the centralized GitHub Actions,<br>
+and only needs to be installed with the first workflow. For subsequent workflows, you will continue with <br>
+this same file and edit it as needed. 
+- **Additional config file** _(previously installed)_:
+  - `github-actions/workflow-configs/_data/label-directory.yml`
+
+### What this workflow does
 
 Monitors open, assigned issues with the default status "In progress (actively working)"
 - Checks for recent update comments from assignees
@@ -43,19 +48,19 @@ Monitors open, assigned issues with the default status "In progress (actively wo
 - Starts in dry-run mode (safe testing)  
 - No project-specific secrets needed
 
-### Configuration Required
+### Configuration required
 
 1. **Review configurations** in the files shown, and note especially the explanations in the files themselves:
-   - `.github/workflows/add-update-label-weekly.yml` 
+   - `github-actions/workflows/add-update-label-weekly.yml` 
      - Adjust cron schedule as needed for your project https://crontab.cronhub.io/
      - Update `if: github.repository == 'hackforla/repo-name'`
      - Double-check the version in `uses: hackforla/automate-the-org/add-update-label-weekly@v0`
-   - `.github/workflow-configs/add-update-label-weekly-config.yml`
+   - `github-actions/workflow-configs/add-update-label-weekly-config.yml`
      - Review `timeframes:`, `projectBoard:` column-status names, and the `required:` and `ignored:` labels.
-   - `.github/workflow-configs/templates/add-update-instructions-template.md`
+   - `github-actions/workflow-configs/templates/add-update-instructions-template.md`
      - Update `<teamSlackChannel>`
      - Otherwise, we recommend keeping this version but of course it can be edited as needed
-   - `.github/workflow-configs/label-directory.yml`
+   - `github-actions/workflow-configs/_data/label-directory.yml`
      - Make sure that your actual label names are reflected here.
      - Do not change the label `keys`. 
 
