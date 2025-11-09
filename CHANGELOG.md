@@ -16,11 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 _No unreleased changes yet._
 
+## v0.4.1
+2025-11-09
+
+- fix: minor bug fix 
+
 ## v0.4.0
 2025-11-08
 
 - Minor release
 - feat: Changed final directory structure
+- feat: changed variable names 
 - feat: Add `rollout-project-label-directory.yml`
 
 ## v0.3.6
