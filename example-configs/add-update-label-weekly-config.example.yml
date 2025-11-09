@@ -1,5 +1,5 @@
 # Configuration for "Add Update Label Weekly" action
-# Copy this file to your project: `.github/workflow-configs/add-update-label-weekly-config.yml`
+# This file installed at: `github-actions/workflow-configs/add-update-label-weekly-config.yml`
 #
 # ==============================================================================
 # IMPORTANT NOTES
@@ -18,7 +18,7 @@
 # Time thresholds (in days)
 # ==============================================================================
 timeframes:
-  # Note: the next three values must be min to max, recentlyUpdated < needsUpdating < isInactive
+  # Note: the next 3 values must be sorted min to max, recentlyUpdated < needsUpdating < isInactive
   recentlyUpdatedByDays: 3    # Issues updated within this many days are considered current
   needsUpdatingByDays: 7      # Issues not updated for this many days are prompted for update
   isInactiveByDays: 14        # Issues not updated for this many days are marked as inactive
@@ -49,7 +49,7 @@ projectBoard:
 
 
 # ==============================================================================
-# Label Directory
+# Label Directory Filepath- Do not change
 # ==============================================================================
 
 # The automation reviews which labels have been applied to the included issues, to:
@@ -61,9 +61,9 @@ projectBoard:
 #
 #   NOTE: Since different workflows use many of the same label names, label name 
 #   values are mapped in your project's label directory yml file- not here.
-#   The path to your label directory is:
+#   The path to your label directory is here (do not change):
 
-labelDirectoryPath: ".github/workflow-configs/label-directory.yml"   # Do not change
+labelDirectoryPath: "github-actions/workflow-configs/_data/label-directory.yml" 
 
 
 
@@ -75,9 +75,9 @@ labelDirectoryPath: ".github/workflow-configs/label-directory.yml"   # Do not ch
 
 labels:
   required:
-    # Required label keys: DO NOT REMOVE, confirm "values" in the label-directory
-      # The following label "keys" must be mapped to your project's actual label names 
-      # "values" via the `label-directory.yml` file. The workflow using these labels 
+    # Required label keys: DO NOT REMOVE, confirm "values" in the label-directory.yml
+      # The following label "keys" must be mapped to your project's actual label name 
+      # "values" via the `label-directory.yml` file. The workflow uses these labels 
       # to flag which issues need updates.
     - statusUpdated                # Map in the `label-directory.yml` file
     - statusInactive1              # Map in the `label-directory.yml` file
@@ -88,8 +88,8 @@ labels:
 
   ignored:
     # Issues with these labels are ignored by the automation.
-      # You may add or remove label "keys" to this list as desired- but be sure
-      # to map the added "key: value" pair in your label-directory.yml file.
+      # You may add or remove label "keys" from this list as desired- but be sure
+      # to map the added "key" to a "value" pair in your label-directory.yml file.
     - draft                        # Map in the `label-directory.yml` file
     - er                           # Map in the `label-directory.yml` file
     - epic                         # Map in the `label-directory.yml` file
@@ -125,7 +125,7 @@ bots:
 #
 # You can use Markdown formatting to edit the template found at:
 
-botCommentTemplatePath: ".github/workflow-configs/templates/add-update-instructions-template.md"   # Do not change
+botCommentTemplatePath: "github-actions/workflow-configs/templates/add-update-instructions-template.md" # Do not change
 
 
 
@@ -134,5 +134,5 @@ botCommentTemplatePath: ".github/workflow-configs/templates/add-update-instructi
 # ==============================================================================
 # Uncomment and configure these if needed for your project
 
-# # Custom timezone for cutoffTime display in comments (default: America/Los_Angeles)
+# Local timezone for cutoffTime displayed in comments (default: America/Los_Angeles)
 # timezone: "America/New_York"
