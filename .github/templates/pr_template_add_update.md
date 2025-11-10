@@ -53,18 +53,29 @@ Monitors open, assigned issues with the default status "In progress (actively wo
 ### Configuration required
 
 1. **Review configurations** in the files shown, and note especially the explanations in the files themselves:
-   - `github-actions/workflows/add-update-label-weekly.yml` 
-     - Adjust cron schedule as needed for your project https://crontab.cronhub.io/
-     - Update `if: github.repository == 'hackforla/repo-name'`
-     - Double-check the version in `uses: hackforla/automate-the-org/add-update-label-weekly@v0`
-   - `github-actions/workflow-configs/add-update-label-weekly-config.yml`
-     - Review `timeframes:`, `projectBoard:` column-status names, and the `required:` and `ignored:` labels.
-   - `github-actions/workflow-configs/templates/add-update-instructions-template.md`
-     - Update `<teamSlackChannel>`
-     - Otherwise, we recommend keeping this version but of course it can be edited as needed
-   - `github-actions/workflow-configs/_data/label-directory.yml`
-     - Make sure that your actual label names are reflected here.
-     - Do not change the label `keys`. 
+    - `github-actions/workflows/add-update-label-weekly.yml` 
+      - Adjust cron schedule as needed for your project https://crontab.cronhub.io/
+      - Update `if: github.repository == 'hackforla/repo-name'`
+      - Double-check the version in `uses: hackforla/automate-the-org/add-update-label-weekly@v0`
+    - `github-actions/workflow-configs/add-update-label-weekly-config.yml`
+      - Review `timeframes:`, `projectBoard:` column-status names, and the `required:` and `ignored:` labels.
+    - `github-actions/workflow-configs/templates/add-update-instructions-template.md`
+      - Update `<teamSlackChannel>`
+      - Otherwise, we recommend keeping this version but of course it can be edited as needed
+    - `github-actions/workflow-configs/_data/label-directory.yml`
+      - Make sure that your `label-directory.yml` file maps these `keys`:
+      - Required `keys` needed by automation:
+        - `statusUpdated` --> "Status: Updated" _(confirm)_          
+        - statusInactive1 --> _none found: should be "Status: To Update!"_ 
+        - statusInactive2 --> "2 Weeks Inactive" _(confirm)_ 
+      - key used in message template:
+        - statusHelpWanted --> "Help Wanted"  _(confirm)_          
+      - `keys` signalling automation to skip issue:
+        - draft  --> "draft"  _(confirm)_                      
+        - er --> _none found yet_            
+        - epic --> "epic"  _(confirm)_              
+        - dependency --> "Dependency"  _(confirm)_     
+        - complexity0 --> _none found: should be "Complexity: Prework"_
 
 3. **Test in dry-run mode**
    - Go to Actions tab → "Add Update Label Weekly"
