@@ -1,5 +1,5 @@
 {
-  "2WeeksInactive": [
+  "statusInactive2": [
     "2 weeks inactive",
     5089932007
   ],
@@ -191,7 +191,7 @@
     "good first issue",
     1456212213
   ],
-  "helpWanted": [
+  "statusHelpWanted": [
     "help wanted",
     1456212211
   ],
