@@ -64,18 +64,18 @@ Monitors open, assigned issues with the default status "In progress (actively wo
       - Otherwise, we recommend keeping this version but of course it can be edited as needed
     - `github-actions/workflow-configs/_data/label-directory.yml`
       - Make sure that your `label-directory.yml` file maps these `keys`:
-      - Required `keys` needed by automation:
+      - `keys` needed by automation:
         - `statusUpdated` --> "Status: Updated" _(confirm)_          
-        - statusInactive1 --> _none found: should be "Status: To Update!"_ 
-        - statusInactive2 --> "2 Weeks Inactive" _(confirm)_ 
-      - key used in message template:
+        - `statusInactive1` --> _none found: should be "Status: To Update!"_ 
+        - `statusInactive2` --> "2 Weeks Inactive" _(confirm)_ 
+      - `key` used in message template:
         - statusHelpWanted --> "Help Wanted"  _(confirm)_          
-      - `keys` signalling automation to skip issue:
-        - draft  --> "draft"  _(confirm)_                      
-        - er --> _none found yet_            
-        - epic --> "epic"  _(confirm)_              
-        - dependency --> "Dependency"  _(confirm)_     
-        - complexity0 --> _none found: should be "Complexity: Prework"_
+      - `keys` telling automation to skip issue (opt):
+        - `draft`  --> "draft"  _(confirm)_                      
+        - `er` --> _none found yet_            
+        - `epic` --> "epic"  _(confirm)_              
+        - `dependency` --> "Dependency"  _(confirm)_     
+        - `complexity0` --> _none found: should be "Complexity: Prework"_
 
 3. **Test in dry-run mode**
    - Go to Actions tab → "Add Update Label Weekly"
