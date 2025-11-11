@@ -66,7 +66,7 @@ Monitors open, assigned issues with the default status "In progress (actively wo
       - Make sure that your `label-directory.yml` file maps these `keys`:
       - `keys` needed by automation:
         - `statusUpdated` --> "Status: Updated" _(confirm)_          
-        - `statusInactive1` --> _none found: should be "Status: To Update!"_ 
+        - `statusInactive1` --> "To Update !" _(confirm)_ 
         - `statusInactive2` --> "2 Weeks Inactive" _(confirm)_ 
       - `key` used in message template:
         - statusHelpWanted --> "Help Wanted"  _(confirm)_          
