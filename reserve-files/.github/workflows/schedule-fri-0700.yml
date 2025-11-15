@@ -9,7 +9,7 @@ on:
 jobs:
   Add-Update-Label-to-Issues-Weekly:
     runs-on: ubuntu-latest
-    if: github.repository == 't-will-gillis/website'
+    if: github.repository == 'hackforla/website'
     steps:
       - uses: actions/checkout@v5
       - uses: actions/github-script@v8
