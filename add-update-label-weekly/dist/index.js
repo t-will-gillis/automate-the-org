@@ -34534,7 +34534,7 @@ const { logger } = __nccwpck_require__(2515);
  */
 async function addLabels(github, context, config, issueNum, ...labelsToAdd) {
   if (config.dryRun) {
-    logger.debug(`Would add '${labelsToAdd}' to issue #${issueNum}`);
+    logger.debug(` Would add '${labelsToAdd}' to issue #${issueNum}`);
     return;
   }
   try {
@@ -34545,7 +34545,7 @@ async function addLabels(github, context, config, issueNum, ...labelsToAdd) {
       issue_number: issueNum,
       labels: labelsToAdd,
     });
-    logger.info(`'${labelsToAdd}' label has been added to issue #${issueNum}`);
+    logger.info(` '${labelsToAdd}' label has been added`);
     // If an error is found, the rest of the script does not stop.
   } catch (err) {
     logger.error(`Function failed to add labels. Please refer to the error below: \n `, err);
@@ -34562,7 +34562,7 @@ async function addLabels(github, context, config, issueNum, ...labelsToAdd) {
 async function removeLabels(github, context, config, issueNum, ...labelsToRemove) {
   for (let label of labelsToRemove) {
     if (config.dryRun) {
-      logger.debug(`Would remove '${label}' from issue #${issueNum}`);
+      logger.debug(` Would remove '${label}' from issue #${issueNum}`);
       continue;
     }
     try {
@@ -34573,10 +34573,12 @@ async function removeLabels(github, context, config, issueNum, ...labelsToRemove
         issue_number: issueNum,
         name: label,
       });
-      logger.info(`'${label}' label has been removed from issue #${issueNum}`);
+      logger.info(` '${label}' label has been removed`);
     } catch (err) {
-      if (err.status !== 404) {
-        logger.error(`Function failed to remove label. Please refer to the error below: \n `, err);
+      if (err.status === 404) {
+        logger.log(` '${label}' label not found, no need to remove`);
+      } else {
+        logger.error(`Function failed to remove labels. Please refer to the error below: \n `, err);
       }
     }
   }
@@ -34880,7 +34882,7 @@ async function resolveLabels({
 
   for (let labelKey of allLabelKeys) {
     if (labelDirectory[labelKey]) {
-      resolvedLabels[labelKey] = labelDirectory[labelKey];
+      resolvedLabels[labelKey] = labelDirectory[labelKey][0];
       logger.debug(`Mapped ${labelKey}: "${labelDirectory[labelKey]}"`);
     } else if (optionalLabelKeys.includes(labelKey)) {
       logger.warn(`Optional ${labelKey} not found - skipping`);
