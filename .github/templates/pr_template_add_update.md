@@ -10,6 +10,8 @@ workflow_file:
 config_files:
   - src: ../../example-configs/add-update-label-weekly-config.example.yml
     dest: github-actions/workflow-configs/add-update-label-weekly-config.yml
+  - src: ../../example-configs/label-directory.tdm-calculator.yml
+    dest: github-actions/workflow-configs/_data/label-directory.yml
   - src: ../../example-configs/add-update-instructions-template.example.md
     dest: github-actions/workflow-configs/templates/add-update-instructions-template.md
   - src: ../../example-configs/label-directory.${PROJECT_NAME}.example.yml
@@ -53,18 +55,29 @@ Monitors open, assigned issues with the default status "In progress (actively wo
 ### Configuration required
 
 1. **Review configurations** in the files shown, and note especially the explanations in the files themselves:
-   - `github-actions/workflows/add-update-label-weekly.yml` 
-     - Adjust cron schedule as needed for your project https://crontab.cronhub.io/
-     - Update `if: github.repository == 'hackforla/repo-name'`
-     - Double-check the version in `uses: hackforla/automate-the-org/add-update-label-weekly@v0`
-   - `github-actions/workflow-configs/add-update-label-weekly-config.yml`
-     - Review `timeframes:`, `projectBoard:` column-status names, and the `required:` and `ignored:` labels.
-   - `github-actions/workflow-configs/templates/add-update-instructions-template.md`
-     - Update `<teamSlackChannel>`
-     - Otherwise, we recommend keeping this version but of course it can be edited as needed
-   - `github-actions/workflow-configs/_data/label-directory.yml`
-     - Make sure that your actual label names are reflected here.
-     - Do not change the label `keys`. 
+    - `github-actions/workflows/add-update-label-weekly.yml` 
+      - Adjust cron schedule as needed for your project https://crontab.cronhub.io/
+      - Update `if: github.repository == 'hackforla/repo-name'`
+      - Double-check the version in `uses: hackforla/automate-the-org/add-update-label-weekly@v0`
+    - `github-actions/workflow-configs/add-update-label-weekly-config.yml`
+      - Review `timeframes:`, `projectBoard:` column-status names, and the `required:` and `ignored:` labels.
+    - `github-actions/workflow-configs/templates/add-update-instructions-template.md`
+      - Update `<teamSlackChannel>`
+      - Otherwise, we recommend keeping this version but of course it can be edited as needed
+    - `github-actions/workflow-configs/_data/label-directory.yml`
+      - Make sure that your `label-directory.yml` file maps these `keys`:
+      - `keys` needed by automation:
+        - `statusUpdated` --> "Status: Updated" _(confirm)_          
+        - `statusInactive1` --> "To Update !" _(confirm)_ 
+        - `statusInactive2` --> "2 Weeks Inactive" _(confirm)_ 
+      - `key` used in message template:
+        - statusHelpWanted --> "Help Wanted"  _(confirm)_          
+      - `keys` telling automation to skip issue (opt):
+        - `draft`  --> "draft"  _(confirm)_                      
+        - `er` --> _none found yet_            
+        - `epic` --> "epic"  _(confirm)_              
+        - `dependency` --> "Dependency"  _(confirm)_     
+        - `complexity0` --> _none found: should be "Complexity: Prework"_
 
 3. **Test in dry-run mode**
    - Go to Actions tab → "Add Update Label Weekly"
