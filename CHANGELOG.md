@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - refactor: `rollout-project-label-directory.yml`
 - feat: added `rollout-workflow-to-projects-REV3.yml`
 - feat: minor refactoring of other files
+- fix: applied update to js-yaml to address CVE-2025-64718
 
 
 ## v0.4.2
