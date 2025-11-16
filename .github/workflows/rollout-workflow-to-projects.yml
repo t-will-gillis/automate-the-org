@@ -39,8 +39,19 @@ jobs:
       - name: Generate token from GitHub App
         id: generate-app-token
         run: |
+          # Prevent partial command failures
+          set -o pipefail
           
-          # Generate JWT
+          # Generate JWT for GitHub App authentication
+          printf "%s" "${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}" > key.pem
+          chmod 600 key.pem
+
+          # Ensure key is written correctly
+          if [[ ! -s key.pem ]]; then
+            echo "Error: private key is empty or missing"
+            exit 1
+          fi
+          
           NOW=$(date +%s)
           IAT=$((NOW - 60))
           EXP=$((NOW + 600))
@@ -48,28 +59,37 @@ jobs:
           HEADER='{"alg":"RS256","typ":"JWT"}'
           PAYLOAD="{\"iat\":${IAT},\"exp\":${EXP},\"iss\":\"${{ secrets.HFLA_WORKFLOW_APP_ID }}\"}"
           
-          # Create JWT using OpenSSL
-          HEADER_B64=$(echo -n "$HEADER" | openssl base64 -e -A | tr '+/' '-_' | tr -d '=')
-          PAYLOAD_B64=$(echo -n "$PAYLOAD" | openssl base64 -e -A | tr '+/' '-_' | tr -d '=')
-          SIGNATURE=$(echo -n "${HEADER_B64}.${PAYLOAD_B64}" | \
-            openssl dgst -sha256 -sign <(echo "${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}") | \
-            openssl base64 -e -A | tr '+/' '-_' | tr -d '=')
-          JWT="${HEADER_B64}.${PAYLOAD_B64}.${SIGNATURE}"
+          encode_url() {
+            openssl base64 -e | tr '+/' '-_' | tr -d '=\n\r'
+          }
           
-          # Get installation ID
-          ORG_NAME=$(echo "${{ github.event.inputs.source_repo }}" | cut -d'/' -f1)      
-          INSTALLATION_ID=$(curl -s -H "Authorization: Bearer ${JWT}" \
+          HEADER_B64=$(echo -n "$HEADER" | encode_url)
+          PAYLOAD_B64=$(echo -n "$PAYLOAD" | encode_url)
+          SIGNATURE=$(
+            printf "%s" "${HEADER_B64}.${PAYLOAD_B64}" \
+              | openssl dgst -sha256 -sign key.pem \
+              | encode_url
+          )
+          
+          JWT="${HEADER_B64}.${PAYLOAD_B64}.${SIGNATURE}"
+          echo "::add-mask::$JWT"
+
+          # Retrieve installation ID
+          INSTALLATION_ID=$(curl -s \
+            -H "Authorization: Bearer ${JWT}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/orgs/${ORG_NAME}/installation" | jq -r '.id')
-          if [[ "$INSTALLATION_ID" == "null" ]] || [[ -z "$INSTALLATION_ID" ]]; then
+            "https://api.github.com/orgs/hackforla/installation" \
+            | jq -r '.id')
+          
+          if [[ -z "$INSTALLATION_ID" || "$INSTALLATION_ID" == "null" ]]; then
             echo "Error: Could not get installation ID"
             echo "Make sure the GitHub App is installed on the organization"
             exit 1
           fi
           
           echo "Installation ID: $INSTALLATION_ID"
-          
-          # Get installation access token
+
+          # Exchange JWT for installation access token
           TOKEN_RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${JWT}" \
             -H "Accept: application/vnd.github+json" \
@@ -77,7 +97,7 @@ jobs:
           
           APP_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.token')
           
-          if [[ "$APP_TOKEN" == "null" ]] || [[ -z "$APP_TOKEN" ]]; then
+          if [[ -z "$APP_TOKEN" || "$APP_TOKEN" == "null" ]]; then
             echo "Error: Could not generate access token"
             echo "Response: $TOKEN_RESPONSE"
             exit 1
@@ -85,10 +105,11 @@ jobs:
           
           # Mask token in logs
           echo "::add-mask::$APP_TOKEN"
-          
-          # Output token
           echo "token=$APP_TOKEN" >> $GITHUB_OUTPUT
-          echo "Token generated successfully"
+
+          # Output token
+          rm key.pem
+          echo "GitHub App installation token generated successfully"
 
       - name: Prepare variables
         run: |

@@ -39,10 +39,19 @@ jobs:
       - name: Generate token from GitHub App
         id: generate-app-token
         run: |
+          # Prevent partial command failures
+          set -o pipefail
+          
           # Generate JWT for GitHub App authentication
-          echo "${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}" > key.pem
+          printf "%s" "${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}" > key.pem
           chmod 600 key.pem
 
+          # Ensure key is written correctly
+          if [[ ! -s key.pem ]]; then
+            echo "Error: private key is empty or missing"
+            exit 1
+          fi
+          
           NOW=$(date +%s)
           IAT=$((NOW - 60))
           EXP=$((NOW + 600))
@@ -51,20 +60,20 @@ jobs:
           PAYLOAD="{\"iat\":${IAT},\"exp\":${EXP},\"iss\":\"${{ secrets.HFLA_WORKFLOW_APP_ID }}\"}"
           
           encode_url() {
-            openssl base64 -e | tr '+/' '-_' | tr -d '='
+            openssl base64 -e | tr '+/' '-_' | tr -d '=\n\r'
           }
           
           HEADER_B64=$(echo -n "$HEADER" | encode_url)
           PAYLOAD_B64=$(echo -n "$PAYLOAD" | encode_url)
           SIGNATURE=$(
-            echo -n "${HEADER_B64}.${PAYLOAD_B64}" \
+            printf "%s" "${HEADER_B64}.${PAYLOAD_B64}" \
               | openssl dgst -sha256 -sign key.pem \
               | encode_url
           )
           
           JWT="${HEADER_B64}.${PAYLOAD_B64}.${SIGNATURE}"
           echo "::add-mask::$JWT"
-          
+
           # Retrieve installation ID
           INSTALLATION_ID=$(curl -s \
             -H "Authorization: Bearer ${JWT}" \
@@ -102,71 +111,6 @@ jobs:
           rm key.pem
           echo "GitHub App installation token generated successfully"
 
-      - name: Check whether label-directory.yml exists in source repo
-        id: check-label-directory
-        run: |
-          SOURCE_REPO="${{ github.event.inputs.source_repo }}"
-
-          if gh api repos/$SOURCE_REPO/contents/github-actions/workflow-configs/_data/label-directory.yml \
-            -H "Authorization: token ${{ steps.generate-app-token.outputs.token }}" \
-            --jq '.name' > /dev/null 2>&1; then
-            echo "FILE_EXISTS=true" >> $GITHUB_ENV
-          else
-            echo "FILE_EXISTS=false" >> $GITHUB_ENV
-          fi
-
-      - name: Trigger Rollout Project Label Directory workflow if needed
-        id: trigger-rollout
-        if: env.FILE_EXISTS == 'false'
-        run: |
-          set -e
-
-          echo "The following file not found in target repo:"
-          echo "`github-actions/workflow-configs/_data/label-directory.yml`"
-          echo "The next step will create this file."
-
-          RUN_ID=$(gh workflow run rollout-workflow-to-projects.yml \
-            -f source_repo="${{ github.event.inputs.source_repo }}" \
-            -f target_repo="${{ github.event.inputs.target_repo }}" \
-            --repo "${{ github.repository }}" \
-            --json run_id --jq '.run_id')
-
-          echo "Triggered rollout workflow: $RUN_ID"
-          echo "ROLL_OUT_RUN_ID=$RUN_ID" >> $GITHUB_ENV
-
-      - name: Wait for rollout workflow to finish
-        if: env.FILE_EXISTS == 'false'
-        run: |
-          set -e
-          RUN_ID="${{ env.ROLL_OUT_RUN_ID }}"
-          echo "Waiting for workflow run: $RUN_ID"
-
-          while true; do
-            STATUS=$(gh run view "$RUN_ID" --json status --jq ".status")
-
-            if [[ "$STATUS" == "completed" ]]; then
-              RESULT=$(gh run view "$RUN_ID" --json conclusion --jq ".conclusion")
-              echo "Workflow finished with result: $RESULT"
-
-              if [[ "$RESULT" != "success" ]]; then
-                echo "Rollout workflow failed. Exiting."
-                exit 1
-              fi
-
-              break
-            fi
-
-            echo "Still running... status=$STATUS"
-            sleep 10
-          done
-
-      - name: Download generated label-directory.json if created
-        if: env.FILE_EXISTS == 'false'
-        uses: actions/download-artifact@v5
-        with:
-          name: label-directory
-          path: temp-label-data
-
       - name: Prepare variables
         run: |
           echo "TARGET_REPO=${{ github.event.inputs.target_repo }}" >> $GITHUB_ENV
@@ -174,6 +118,53 @@ jobs:
           echo "ROLLOUT_BRANCH=${{ github.event.inputs.rollout_branch }}" >> $GITHUB_ENV
           echo "TEMPLATE_FILE=${{ github.event.inputs.template_file }}" >> $GITHUB_ENV
           echo "DRY_RUN=${{ github.event.inputs.dry_run }}" >> $GITHUB_ENV
+
+          # Extract project name from target repo
+          PROJECT_NAME=$(echo "${TARGET_REPO}" | cut -d'/' -f2)
+          echo "PROJECT_NAME=${PROJECT_NAME}" >> $GITHUB_ENV
+
+          # Extract org name from source repo
+          ORG_NAME=$(echo "$SOURCE_REPO" | cut -d'/' -f1)
+          echo "ORG_NAME=${ORG_NAME}" >> $GITHUB_ENV
+
+      - name: Check whether label-directory.json exists in target repo
+        id: check-target-label-dir
+        run: |
+          DEST_FILEPATH="target/github-actions/workflow-configs/_data/label-directory.json"
+          if [ -f "$DEST_FILEPATH" ]; then
+            echo "TARGET_EXISTS=true" >> $GITHUB_ENV
+            echo "Label directory file exists in target repo. Do not overwrite."
+          else
+            echo "TARGET_EXISTS=false" >> $GITHUB_ENV
+            echo "Label directory file does not exist in target repo. Checking source..."
+          fi
+
+          echo "DEST_FILEPATH=$DEST_FILEPATH" >> $GITHUB_ENV
+
+      - name: Check whether label-directory.<project_name>.json exists in source repo
+        id: check-source-label-dir
+        run: |
+          if [[ "$TARGET_EXISTS" == "true" ]]; then
+            echo "Skip source check because target exists."
+            exit 0
+          fi
+
+          SRC_FILENAME="label-directory.${PROJECT_NAME}.json"
+          SRC_FILEPATH="central/example-configs/$SRC_FILENAME"
+
+          if [ -f "$SRC_FILEPATH" ]; then
+            echo "SOURCE_EXISTS=true" >> $GITHUB_ENV
+            echo "Label directory file exists in source repo. Proceeding..."
+          else
+            echo "SOURCE_EXISTS=false" >> $GITHUB_ENV
+            echo "Label directory file does not exist in source repo."
+            echo " ⮡  Run Rollout Project Label Directory first. Exiting..."
+            exit 1
+          fi
+
+          # persist for downstream steps
+          echo "SRC_FILENAME=$SRC_FILENAME" >> $GITHUB_ENV
+          echo "SRC_FILEPATH=$SRC_FILEPATH" >> $GITHUB_ENV
 
       - name: Checkout source repo
         uses: actions/checkout@v5
@@ -243,6 +234,19 @@ jobs:
           
           echo "Parsed and resolved config_files.json:"
           cat config_files.json
+
+      - name: Append source file if needed
+        run: |
+          # Only append if target file does NOT exist but source file DOES exist
+          if [[ "$TARGET_EXISTS" == "false" && "$SOURCE_EXISTS" == "true" ]]; then
+            echo "Appending label-directory.json to config_files.json"
+
+            jq --arg src "$SRC_FILEPATH" --arg dest "$DEST_FILEPATH" \
+              '. += [{src: $src, dest: $dest}]' config_files.json > config_files_temp.json
+            mv config_files_temp.json config_files.json
+
+            echo "Appended $SRC_FILEPATH -> $DEST_FILEPATH to config_files.json"
+          fi
 
       - name: Extract workflow name from workflow source
         run: |
