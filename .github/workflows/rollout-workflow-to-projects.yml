@@ -39,7 +39,6 @@ jobs:
       - name: Generate token from GitHub App
         id: generate-app-token
         run: |
-          # ------------> FUTURE: Generalize GitHub Apps
           
           # Generate JWT
           NOW=$(date +%s)
