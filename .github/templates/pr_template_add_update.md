@@ -14,7 +14,7 @@ config_files:
     dest: github-actions/workflow-configs/_data/label-directory.yml
   - src: ../../example-configs/add-update-instructions-template.example.md
     dest: github-actions/workflow-configs/templates/add-update-instructions-template.md
-  - src: ../../example-configs/label-directory.${PROJECT_NAME}.example.yml
+  - src: ../../example-configs/label-directory.example.yml
     dest: github-actions/workflow-configs/_data/label-directory.yml
 ```
 -->
