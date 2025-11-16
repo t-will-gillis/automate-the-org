@@ -12,8 +12,6 @@ config_files:
     dest: github-actions/workflow-configs/add-update-label-weekly-config.yml
   - src: ../../example-configs/add-update-instructions-template.example.md
     dest: github-actions/workflow-configs/templates/add-update-instructions-template.md
-  - src: ../../example-configs/label-directory.${PROJECT_NAME}.example.json
-    dest: github-actions/workflow-configs/_data/label-directory.json
 ```
 -->
 
