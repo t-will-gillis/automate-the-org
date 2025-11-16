@@ -10,8 +10,6 @@ workflow_file:
 config_files:
   - src: ../../example-configs/add-update-label-weekly-config.example.yml
     dest: github-actions/workflow-configs/add-update-label-weekly-config.yml
-  - src: ../../example-configs/label-directory.tdm-calculator.yml
-    dest: github-actions/workflow-configs/_data/label-directory.yml
   - src: ../../example-configs/add-update-instructions-template.example.md
     dest: github-actions/workflow-configs/templates/add-update-instructions-template.md
 ```
@@ -62,8 +60,8 @@ Monitors open, assigned issues with the default status "In progress (actively wo
     - `github-actions/workflow-configs/templates/add-update-instructions-template.md`
       - Update `<teamSlackChannel>`
       - Otherwise, we recommend keeping this version but of course it can be edited as needed
-    - `github-actions/workflow-configs/_data/label-directory.yml`
-      - Make sure that your `label-directory.yml` file maps these `keys`:
+    - `github-actions/workflow-configs/_data/label-directory.json`
+      - Make sure that your `label-directory.json` file maps these `keys`:
       - `keys` needed by automation:
         - `statusUpdated` --> "Status: Updated" _(confirm)_          
         - `statusInactive1` --> "To Update !" _(confirm)_ 
