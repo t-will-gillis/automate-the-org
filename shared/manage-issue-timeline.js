@@ -1,30 +1,34 @@
 const { logger } = require('./format-log-messages');
 
-
-
 /**
- * Returns the current date and time in Los Angeles time (PST/PDT)
+ * Default returns the current date and time in Los Angeles time (PST/PDT)
  * formatted as a string.
  *
  * The output format is: `YYYY/MM/DD HH:MM TZ`, where `TZ` is either
  * PST or PDT depending on daylight saving time.
  *
- * @returns {string} Formatted timestamp in Los Angeles local time.
- *
- * @example
- * const timestamp = getLATimestamp();
- * console.log(timestamp); // "2025/09/02 12:38 PDT"
+ * @param {String} datetime                         - The date and time string from the event
+ * @param {String} [timezone='America/Los_Angeles'] - Optional IANA timezone string
+ * @returns {String}                                - Formatted date and time string for timezone
  */
-function getLATimestamp() {
+function setLocalTime(datetime, timezone = 'America/Los_Angeles') {
+  // Validate timezone input
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: timezone });
+  } catch (e) {
+    logger.warn(`Invalid timezone specified: '${timezone}', defaulting to 'America/Los_Angeles'`);
+    timezone = 'America/Los_Angeles';
+  }
+
   // Create notification time string in PST/PDT
-  return new Date().toLocaleString("en-US", {
-    timeZone: "America/Los_Angeles",
+  return new Date(datetime).toLocaleString("en-US", {
+    timeZone: timezone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-    hour12: false,
+    hour12: true,
     timeZoneName: "short",
   });
 }
@@ -36,9 +40,10 @@ function getLATimestamp() {
  * @param {Object} github                 - GitHub object from actions/github-script
  * @param {Object} context                - context object from actions/github-script
  * @param {Number} issueNum               - the issue number
-* @returns {Array<Object>} timelineArray  - an array containing the timeline of issue events
+ * @returns {Array<Object>} timelineArray - an array containing the timeline of issue events
  */
-async function getIssueTimeline(issueNum, github, context) {
+async function getIssueTimeline(github, context, issueNum) {
+
   let timelineArray = [];
   let page = 1;
 
@@ -69,4 +74,4 @@ async function getIssueTimeline(issueNum, github, context) {
   return timelineArray;
 }
 
-module.exports = { getIssueTimeline };
+module.exports = { setLocalTime, getIssueTimeline };
