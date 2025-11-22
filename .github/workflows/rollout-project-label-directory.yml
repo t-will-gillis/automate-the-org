@@ -1,0 +1,245 @@
+name: Rollout Project Label Directory
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      target_repo:
+        description: 'Provide the name of the target repo, e.g. "org/project"'
+        required: true
+        type: string
+      source_repo:
+        description: 'Location of source files and automation trigger'
+        required: true
+        default: 'hackforla/automate-the-org'
+      github_app_name:
+        description: 'GitHub App name/slug'
+        required: true
+        default: 'hfla-workflow-rollout'
+      dry_run:
+        description: 'Dry-run mode: preview changes without creating PRs'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  Rollout-Label-Directory:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate target_repo format
+        run: |
+          if [[ "${{ github.event.inputs.target_repo }}" != */* ]]; then
+            echo "Target repo must be in the format 'org/repo-name'. Exiting."
+            exit 1
+          fi
+
+      - name: Checkout source repo
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ github.event.inputs.source_repo }}
+          path: central
+
+      - name: Generate token from GitHub App
+        id: generate-app-token
+        run: |
+          # Prevent partial command failures
+          set -o pipefail
+          
+          # Generate JWT for GitHub App authentication
+          printf "%s" "${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}" > key.pem
+          chmod 600 key.pem
+
+          # Ensure key is written correctly
+          if [[ ! -s key.pem ]]; then
+            echo "Error: private key is empty or missing"
+            exit 1
+          fi
+          
+          NOW=$(date +%s)
+          IAT=$((NOW - 60))
+          EXP=$((NOW + 600))
+          
+          HEADER='{"alg":"RS256","typ":"JWT"}'
+          PAYLOAD="{\"iat\":${IAT},\"exp\":${EXP},\"iss\":\"${{ secrets.HFLA_WORKFLOW_APP_ID }}\"}"
+          
+          encode_url() {
+            openssl base64 -e | tr '+/' '-_' | tr -d '=\n\r'
+          }
+          
+          HEADER_B64=$(echo -n "$HEADER" | encode_url)
+          PAYLOAD_B64=$(echo -n "$PAYLOAD" | encode_url)
+          SIGNATURE=$(
+            printf "%s" "${HEADER_B64}.${PAYLOAD_B64}" \
+              | openssl dgst -sha256 -sign key.pem \
+              | encode_url
+          )
+          
+          JWT="${HEADER_B64}.${PAYLOAD_B64}.${SIGNATURE}"
+          echo "::add-mask::$JWT"
+
+          # Retrieve installation ID
+          INSTALLATION_ID=$(curl -s \
+            -H "Authorization: Bearer ${JWT}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/orgs/hackforla/installation" \
+            | jq -r '.id')
+          
+          if [[ -z "$INSTALLATION_ID" || "$INSTALLATION_ID" == "null" ]]; then
+            echo "Error: Could not get installation ID"
+            echo "Make sure the GitHub App is installed on the organization"
+            exit 1
+          fi
+          
+          echo "Installation ID: $INSTALLATION_ID"
+
+          # Exchange JWT for installation access token
+          TOKEN_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${JWT}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens")
+          
+          APP_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.token')
+          
+          if [[ -z "$APP_TOKEN" || "$APP_TOKEN" == "null" ]]; then
+            echo "Error: Could not generate access token"
+            echo "Response: $TOKEN_RESPONSE"
+            exit 1
+          fi
+          
+          # Mask token in logs
+          echo "::add-mask::$APP_TOKEN"
+          echo "token=$APP_TOKEN" >> $GITHUB_OUTPUT
+
+          # Output token
+          rm key.pem
+          echo "GitHub App installation token generated successfully"
+
+      - name: Checkout target repo
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ github.event.inputs.target_repo }}
+          path: target
+          token: ${{ steps.generate-app-token.outputs.token }}
+
+      - name: Export workflow inputs to environment
+        run: |
+          TARGET_REPO="${{ github.event.inputs.target_repo }}"
+          SOURCE_REPO="${{ github.event.inputs.source_repo }}"
+          DRY_RUN="${{ github.event.inputs.dry_run }}"
+          PROJECT_NAME=$(echo "${TARGET_REPO}" | cut -d'/' -f2)
+          ORG_NAME=$(echo "$SOURCE_REPO" | cut -d'/' -f1)
+          
+          echo "TARGET_REPO=${TARGET_REPO}" >> $GITHUB_ENV
+          echo "SOURCE_REPO=${SOURCE_REPO}" >> $GITHUB_ENV
+          echo "DRY_RUN=${DRY_RUN}" >> $GITHUB_ENV
+          echo "PROJECT_NAME=${PROJECT_NAME}" >> $GITHUB_ENV
+          echo "ORG_NAME=${ORG_NAME}" >> $GITHUB_ENV
+
+      - name: Check whether label-directory.json exists in target repo
+        id: check-target-label-dir
+        run: |
+          if [ -f "target/github-actions/workflow-configs/_data/label-directory.json" ]; then
+            echo "Label directory file exists in target repo. Do not proceed."
+            exit 1
+          else
+            echo "Label directory file does not exist in target repo. Proceeding..."
+          fi
+          
+      - name: Check whether label-directory.json exists in source repo
+        id: check-source-label-dir
+        run: |
+          FILENAME="label-directory.${PROJECT_NAME}.json"
+          FILEPATH="central/example-configs/$FILENAME"
+
+          if [ -f "$FILEPATH" ]; then
+            echo "Label directory file exists in source repo. Do not proceed."
+            exit 1
+          else
+            echo "Label directory file does not exist in source repo. Proceeding..."
+          fi
+
+          # persist for downstream steps
+          echo "FILENAME=$FILENAME" >> $GITHUB_ENV
+          echo "FILEPATH=$FILEPATH" >> $GITHUB_ENV
+
+      - name: Retrieve all labels from target repo
+        id: retrieve-labels
+        env:
+          GITHUB_TOKEN: ${{ steps.generate-app-token.outputs.token }}
+        run: |
+          echo "Retrieving labels for $TARGET_REPO"
+
+          # Fetch all labels into one JSON array
+          gh api --paginate "repos/$TARGET_REPO/labels?per_page=100" \
+            -H "Accept: application/vnd.github+json" > all_labels.json
+
+          # Create initial list {id,name}
+          jq '[.[] | {id: .id, name: .name}]' all_labels.json > labels_simple.json
+
+          echo "Retrieved labels:"
+          cat labels_simple.json
+
+          echo "LABELS_JSON=$(cat labels_simple.json | jq -c .)" >> $GITHUB_ENV
+
+      - name: Generate label-directory.json
+        id: generate-json
+        env:
+          LABELS_JSON: ${{ env.LABELS_JSON }}
+        run: |
+          echo "Generating label-directory.{PROJECT_NAME}.json in source repo..."
+
+          mkdir -p example-configs
+
+          node <<'EOF'
+          const fs = require('fs');
+          const path = require('path');
+
+          const raw = process.env.LABELS_JSON || "[]";
+          const labels = JSON.parse(raw);
+
+          const toCamelCase = (str) => {
+            return String(str || '')
+              .split(/[^a-zA-Z0-9]+/)
+              .filter(Boolean)
+              .map((word, i) => i === 0 ? word.toLowerCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join('');
+          };
+          const labelDirectory = {};
+          for (const label of labels) {
+            const labelKey = toCamelCase(label.name);
+            // If collision, make unique by appending ID
+            if (labelDirectory[labelKey]) {
+              const uniqueKey = `${labelKey}_${label.id}`;
+              labelDirectory[uniqueKey] = [label.name, Number(label.id)];
+            } else {
+              labelDirectory[labelKey] = [label.name, Number(label.id)];
+            }
+          }
+
+          const filename = `label-directory.${process.env.PROJECT_NAME}.json`;
+          const filepath = path.join('central', 'example-configs', filename);
+          fs.writeFileSync(filepath, JSON.stringify(labelDirectory, null, 2), 'utf8');
+
+          console.log(`Generated label-directory.json at FILEPATH = ${filepath}:`);
+          console.log(JSON.stringify(labelDirectory, null, 2));
+          EOF
+
+          # persist FILEPATH for downstream steps
+          echo "FILEPATH=$filepath" >> $GITHUB_ENV
+        
+      - name: Commit file back to source repo
+        run: |
+          cd central 
+          git config user.name "${{ github.event.inputs.github_app_name }}[bot]"
+          git config user.email "${{ github.event.inputs.github_app_name }}@${ORG_NAME}.org"
+
+          echo "Committing: $FILEPATH"
+
+          git add "$FILEPATH"
+          git commit -m "Add label directory file for project $PROJECT_NAME" || echo "No changes to commit."
+
+          git push
