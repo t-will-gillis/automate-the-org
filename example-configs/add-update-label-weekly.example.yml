@@ -1,41 +1,20 @@
-name: Add Update Label Weekly
+name: Schedule Friday 0700
 
-# Customization notes:
-# ⓵ CUSTOMIZE: Change cron. Currently runs Fri 0700 UTC, exc. July and December
-#    ⮡ You can compose a schedule here: https://crontab.cronhub.io/
-# ⓶ CUSTOMIZE: Change to your project repo name
-# ⓷ Confirm that this is the most recent version
-
+# This action runs at 7:00 UTC/ 0:00 PDT (midnight) every Friday, except during July and December.
 on:
   schedule:
-    - cron: '0 7 * 1-6,8-11 5' # ⓵
+    - cron:  '0 7 * 1-6,8-11 5'
   workflow_dispatch:
-    inputs:
-      dry-run:
-        description: 'Run in dry-run mode without posting comments or updating issues'
-        type: choice
-        options:
-          - 'true'
-          - 'false'
-        default: 'true'
 
 jobs:
-  Add-Update-Label-Weekly:
+  Add-Update-Label-to-Issues-Weekly:
     runs-on: ubuntu-latest
-    if: github.repository == 'your-project/repo-name' # ⓶
+    if: github.repository == 'hackforla/website'
     steps:
-      - name: Generate token from GitHub App
-        id: generate-app-token
-        uses: actions/create-github-app-token@v2
+      - uses: actions/checkout@v5
+      - uses: actions/github-script@v8
         with:
-          app-id: ${{ secrets.HFLA_GRAPHQL_APP_ID }}
-          private-key: ${{ secrets.HFLA_GRAPHQL_APP_PRIVATE_KEY }}
-
-      - name: Checkout repo
-        uses: actions/checkout@v5
-
-      - name: Run workflow
-        uses: hackforla/automate-the-org/add-update-label-weekly@v1 # ⓷ 
-        with:
-          github-token: ${{ steps.generate-app-token.outputs.token }}
-          dry-run: ${{ github.event.inputs.dry-run || 'true' }}
+          github-token: ${{ secrets.HACKFORLA_GRAPHQL_TOKEN }}
+          script: |
+            const script = require('./github-actions/trigger-schedule/add-update-label-weekly/add-label.js');
+            script({ g: github, c: context });
