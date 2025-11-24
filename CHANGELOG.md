@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs: Troubleshooting guide
 
 ## [Unreleased]
+_No unreleased changes yet._
+
+## v0.5.0
+2025-11-24
 - refactor: recreated all files to preserve history
 
 
@@ -193,16 +197,52 @@ This project uses **Semantic Versioning** and a manual `[Unreleased]` changelog 
 
 ### Steps for a Release
 
-1. Add all user-facing changes to the `[Unreleased]` section of `CHANGELOG.md`.
-2. Decide the next version according to [SemVer](https://semver.org/):
-   - `patch` → bug fix only (v0.1.1 → v0.1.2)
-   - `minor` → new feature (v0.1.1 → v0.2.0)
-   - `major` → breaking change (v0.1.1 → v1.0.0)
-3. Run the release script:
+1 .Make all necessary changes and commit as usual:
 
 ```bash
-./release.sh <new-version>
+git add .
+git commit -m "what is being committed"
+git push
+```
+_Note: as always, use `git add .` or `git add <individual file>` as appropriate_
 
+2. Rebuild the `@vercel/ncc` files, then re-commit: 
+
+```bash
+npm install
+npm run build
+git add .
+git commit -m "new release build"
+git push
+```
+
+3. Update this file as needed, then double-check the most recent version:
+
+```bash
+git tag
+```
+This should match the most recent version listed in this file and the latest version listed in [package.json](https://github.com/hackforla/automate-the-org/blob/master/package.json). If it doesn't, then you may need to manually correct the versions.
+
+4. Now run the automatic versioning utility. This will check whether you have set an `upstream`, and ask whether the next version should be a patch, minor, or major version change per [semver](https://semver.org/) (e.g. version MAJOR.MINOR.PATCH):
+
+
+```bash
+./auto-release.sh
+```
+
+#### Versioning adjustments
+Use the following for adjustments to the version tags (but only if you understand what you are doing!) 
+
+- To remove previously-committed versions:
+  ```bash
+  git tag -d <version>
+  git push origin --delete <version>
+  ```
+  _Remember to adjust `CHANGELOG.md` and `package.json` also._
+- If you did not set your upstream branch but pushed the version anyway, you will need to set your `upstream` to `master` branch, then:
+  ```bash
+  git push upstream <version>
+  ```
 
 ---
 
