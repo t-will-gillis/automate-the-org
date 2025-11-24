@@ -1,7 +1,9 @@
+// Import modules
 const { logger } = require('./format-log-messages');
 
 /**
  * Minimize issue comment as OUTDATED given the comment's node Id
+ * @param {Object} github - the octokit instance
  * @param {String} nodeId - node Id of comment to be marked as 'OUTDATED'
  * 
  */

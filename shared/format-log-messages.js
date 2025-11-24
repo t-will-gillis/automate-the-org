@@ -1,5 +1,4 @@
-// Logger utility: namespaced, color-coded console output GitHub Actions logs
-// format-log-messages.js
+// Logger utility: namespaced, color-coded console output for GitHub Actions
 
 const colors = {
   reset: "\x1b[0m",
@@ -36,11 +35,11 @@ const logger = {
   },
 
   // Errors: annotated in GitHub Actions logs
-error: (msg, err = "") => {
-  const details = err instanceof Error ? err.stack : err;
-  console.error(`${colors.red}[ERROR]${colors.reset} ${msg}${err ? `, ${err}` : ""}`);
-  console.log(`::error::${msg}${details ? `, ${details}` : ""}`);
-},
+  error: (msg, err = "") => {
+    const details = err instanceof Error ? err.stack : err;
+    console.error(`${colors.red}[ERROR]${colors.reset} ${msg}${err ? `, ${err}` : ""}`);
+    console.log(`::error::${msg}${details ? `, ${details}` : ""}`);
+  },
 
   // Diagnostic detail; for dry-run/debug or verbose mode
   debug: (msg) => {

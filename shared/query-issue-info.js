@@ -1,7 +1,10 @@
+// Import modules
+const { logger } = require('./format-log-messages');
+
 /**
  * @description - Get item info using its issue number
  * @param {Object} github    - GitHub object from function calling queryIssueInfo()
- * @params {Object} context  - Context of the function calling queryIssueInfo()
+ * @param {Object} context  - Context of the function calling queryIssueInfo()
  * @returns {Object}         - An object containing the item ID and its status name
  */
 async function queryIssueInfo(github, context, issueNum) {

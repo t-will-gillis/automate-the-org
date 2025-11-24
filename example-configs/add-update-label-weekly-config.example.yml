@@ -6,7 +6,7 @@
 # ==============================================================================
 #
 #   1. The configuration options are given as "key: value" pairs.
-#       a. Do not edit any "keys" as this may break the automation.
+#       a. Except where noted: DO NOT EDIT "keys" as this may break the automation.
 #       b. Customize the "values" below for your project's needs.
 #   2. The default values will apply if not edited.
 #   3. Text values must match the EXACT text used in your project repo.
@@ -18,6 +18,7 @@
 # Time thresholds (in days)
 # ==============================================================================
 timeframes:
+  # Customize the number of days as needed for your project 
   # Note: the next 3 values must be sorted min to max, recentlyUpdated < needsUpdating < isInactive
   recentlyUpdatedByDays: 3    # Issues updated within this many days are considered current
   needsUpdatingByDays: 7      # Issues not updated for this many days are prompted for update
@@ -60,7 +61,7 @@ projectBoard:
 # which correspond to the actual label name "values" used by your repo.
 #
 #   NOTE: Since different workflows use many of the same label names, label name 
-#   values are mapped in your project's label directory yml file- not here.
+#   values are mapped in your project's label directory json file- not here.
 #   The path to your label directory is here (do not change):
 
 labelDirectoryPath: "github-actions/workflow-configs/_data/label-directory.json" 
@@ -88,8 +89,8 @@ labels:
 
   ignored:
     # Issues with these labels are ignored by the automation.
-      # You may add or remove label "keys" from this list as desired- but be sure
-      # to map the added "key" to a "value" pair in your label-directory.json file.
+      # EXCEPTION: you may add or remove label "keys" from this list as desired- but
+      # ensure the added "key" maps to a "value" in your label-directory.json file.
     - draft                        # Map in the `label-directory.json` file
     - er                           # Map in the `label-directory.json` file
     - epic                         # Map in the `label-directory.json` file
@@ -112,7 +113,7 @@ bots:
 
 
 # ==============================================================================
-# Bot comment template - Do not change
+# Bot comment template
 # ==============================================================================
 # Template for the comment posted to issues needing updates
 # Variables used by template:
@@ -122,10 +123,12 @@ bots:
 #   ${statusHelpWanted}   - The "help wanted" label name from your label directory
 #   ${questionsStatus}    - The "questions" status on your Project Board (e.g., "Questions / In Review")
 #   ${cutoffTime}         - The formatted timestamp of the issue's last update
-#
-# You can use Markdown formatting to edit the template found at:
 
-botCommentTemplatePath: "github-actions/workflow-configs/templates/add-update-instructions-template.md" # Do not change
+teamSlackChannel: ""  # Only if needed, for example "#project-site"
+
+# Do not change the path to the bot comment template file below.
+# If needed, edit the file using markdown syntax at the given path.
+botCommentTemplatePath: "github-actions/workflow-configs/templates/add-update-instructions-template.md"
 
 
 

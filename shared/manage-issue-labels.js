@@ -1,8 +1,6 @@
 // Import modules
 const { logger } = require('./format-log-messages');
 
-
-
 /**
  * Adds labels to a specified issue
  * @param {Number} issueNum   -an issue's number

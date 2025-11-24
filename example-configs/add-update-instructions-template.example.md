@@ -1,9 +1,7 @@
 <!-- Message template used with the "Add Update Label Weekly" workflow -->
-<!-- This file to be installed to: `github-actions/workflow-configs/templates/add-update-instructions-template.md` -->
+<!-- This file to be installed at: `github-actions/workflow-configs/templates/add-update-instructions-template.md` -->
 
-<!-- CUSTOMIZE <teamSlackChannel>. The automation will replace the other variables during runtime  -->
-
-Hello ${assignees}
+Hello ${assignees}-
 
 Please add an update using the below template (even if you have a pull request). Afterwards, remove
 the `${label}` label and add the `${statusUpdated}` label.
@@ -16,7 +14,7 @@ the `${label}` label and add the `${statusUpdated}` label.
 
 If you need help, be sure to either: 1) place your issue in the "${questionsStatus}" status-column of the 
 Project Board and ask for help at your next meeting; 2) put a `${statusHelpWanted}` label on your issue 
-and pull request; or 3) put up a request for assistance on the team's <teamSlackChannel> Slack channel.  
+and pull request; or 3) put up a request for assistance on the team's ${teamSlackChannel} Slack channel.  
 
 Please note that including your questions in the issue comments- along with screenshots, if applicable- 
 will help us to help you. [Here](https://github.com/hackforla/website/issues/1619#issuecomment-897315561) and [here](https://github.com/hackforla/website/issues/1908#issuecomment-877908152) are examples of well-formed questions.  
