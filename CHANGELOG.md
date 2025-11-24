@@ -14,7 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs: Troubleshooting guide
 
 ## [Unreleased]
-_No unreleased changes yet._
+- refactor: recreated all files to preserve history
+
+
 
 ## v0.4.4
 2025-11-16
@@ -40,6 +42,8 @@ _No unreleased changes yet._
 - feat: Changed final directory structure
 - feat: changed variable names 
 - feat: Add `rollout-project-label-directory.yml`
+
+
 
 ## v0.3.6
 2025-11-05
@@ -138,6 +142,7 @@ _No unreleased changes yet._
 - README.md with quick start guide
 - CHANGELOG.md for consuming projects
 - Example configuration files
+
 
 
 ---

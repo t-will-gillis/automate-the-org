@@ -34391,6 +34391,7 @@ function wrappy (fn, cb) {
 /***/ 8733:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
+// Import modules
 const { logger } = __nccwpck_require__(2515);
 
 /**
@@ -34427,8 +34428,7 @@ module.exports = findLinkedIssue;
 /***/ 2515:
 /***/ ((module) => {
 
-// Logger utility: namespaced, color-coded console output GitHub Actions logs
-// format-log-messages.js
+// Logger utility: namespaced, color-coded console output for GitHub Actions
 
 const colors = {
   reset: "\x1b[0m",
@@ -34465,11 +34465,11 @@ const logger = {
   },
 
   // Errors: annotated in GitHub Actions logs
-error: (msg, err = "") => {
-  const details = err instanceof Error ? err.stack : err;
-  console.error(`${colors.red}[ERROR]${colors.reset} ${msg}${err ? `, ${err}` : ""}`);
-  console.log(`::error::${msg}${details ? `, ${details}` : ""}`);
-},
+  error: (msg, err = "") => {
+    const details = err instanceof Error ? err.stack : err;
+    console.error(`${colors.red}[ERROR]${colors.reset} ${msg}${err ? `, ${err}` : ""}`);
+    console.log(`::error::${msg}${details ? `, ${details}` : ""}`);
+  },
 
   // Diagnostic detail; for dry-run/debug or verbose mode
   debug: (msg) => {
@@ -34493,10 +34493,12 @@ module.exports = { logger };
 /***/ 7688:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
+// Import modules
 const { logger } = __nccwpck_require__(2515);
 
 /**
  * Minimize issue comment as OUTDATED given the comment's node Id
+ * @param {Object} github - the octokit instance
  * @param {String} nodeId - node Id of comment to be marked as 'OUTDATED'
  * 
  */
@@ -34534,8 +34536,6 @@ module.exports = minimizeIssueComment;
 
 // Import modules
 const { logger } = __nccwpck_require__(2515);
-
-
 
 /**
  * Adds labels to a specified issue
@@ -34599,12 +34599,15 @@ module.exports = { addLabels, removeLabels }
 /***/ }),
 
 /***/ 1563:
-/***/ ((module) => {
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+// Import modules
+const { logger } = __nccwpck_require__(2515);
 
 /**
  * @description - Get item info using its issue number
  * @param {Object} github    - GitHub object from function calling queryIssueInfo()
- * @params {Object} context  - Context of the function calling queryIssueInfo()
+ * @param {Object} context  - Context of the function calling queryIssueInfo()
  * @returns {Object}         - An object containing the item ID and its status name
  */
 async function queryIssueInfo(github, context, issueNum) {
@@ -36837,7 +36840,7 @@ module.exports = parseParams
 var __webpack_exports__ = {};
 const core = __nccwpck_require__(7484);
 const github = __nccwpck_require__(3228);
-const { logger: add_update_label_weekly_logger } = __nccwpck_require__(2515);
+const { logger } = __nccwpck_require__(2515);
 const resolveConfigs = __nccwpck_require__(9666);
 const resolveLabels = __nccwpck_require__(9502);
 const addUpdateLabelWeekly = __nccwpck_require__(602);
@@ -36849,17 +36852,17 @@ const yaml = __nccwpck_require__(4281);
  */
 async function run() {
   try {
-    add_update_label_weekly_logger.log(`=`.repeat(60));
-    add_update_label_weekly_logger.log(`Add Update Label Weekly starting...`);
-    add_update_label_weekly_logger.log(`=`.repeat(60));
+    logger.log(`=`.repeat(60));
+    logger.log(`Add Update Label Weekly starting...`);
+    logger.log(`=`.repeat(60));
     
     // Get action inputs
     const token = core.getInput('github-token', { required: true });
     const configPath = core.getInput('config-path') || 'github-actions/workflow-configs/add-update-label-weekly-config.yml';
     const dryRunInput = core.getInput('dry-run') || 'false';
     const dryRun = (dryRunInput).toLowerCase() === 'true';
-    dryRun && add_update_label_weekly_logger.warn(`Running in DRY-RUN mode: No changes will be applied`);
-    add_update_label_weekly_logger.setDryRun(dryRun);
+    dryRun && logger.warn(`Running in DRY-RUN mode: No changes will be applied`);
+    logger.setDryRun(dryRun);
     
     // Initialize octokit/GitHub client
     const octokit = github.getOctokit(token);
@@ -36871,15 +36874,15 @@ async function run() {
       throw new Error(`GITHUB_WORKSPACE environment variable not set`);
     }
     
-    add_update_label_weekly_logger.info(`Project repository: ${context.repo.owner}/${context.repo.repo}`);
-    add_update_label_weekly_logger.info(`Working directory: ${projectRepoPath}`);
-    add_update_label_weekly_logger.log(``);
+    logger.info(`Project repository: ${context.repo.owner}/${context.repo.repo}`);
+    logger.info(`Working directory: ${projectRepoPath}`);
+    logger.log(``);
     
     // Define workflow-specific defaults
     const defaults = getDefaultConfigs();
     
     // Load and merge configuration
-    add_update_label_weekly_logger.step(`Resolving configurations...`);
+    logger.step(`Resolving configurations...`);
     const config = resolveConfigs.resolve({
       projectRepoPath,
       configPath,
@@ -36895,13 +36898,13 @@ async function run() {
         'commentTemplate',
       ],
     });
-    add_update_label_weekly_logger.log(``);
+    logger.log(``);
     
     // Determine label directory path from config
     const labelDirectoryPath = config.labelDirectoryPath || 'github-actions/workflow-configs/_data/label-directory.json';
     
     // Resolve label keys to label names
-    add_update_label_weekly_logger.step(`Resolving labels...`);
+    logger.step(`Resolving labels...`);
     const labels = await resolveLabels.resolve({
       projectRepoPath,
       labelDirectoryPath,
@@ -36919,10 +36922,10 @@ async function run() {
         'statusHelpWanted',
       ],
     });
-    add_update_label_weekly_logger.log(``);
+    logger.log(``);
     
     // Execute the workflow
-    add_update_label_weekly_logger.step(`Running Add Update Label Weekly workflow...`);
+    logger.step(`Running Add Update Label Weekly workflow...`);
     
     await addUpdateLabelWeekly({
       github: octokit,
@@ -36931,16 +36934,16 @@ async function run() {
       config,
     });
     
-    add_update_label_weekly_logger.log(``);
-    add_update_label_weekly_logger.log(`=`.repeat(60));
-    add_update_label_weekly_logger.log(`Add Update Label Weekly - completed successfully`);
-    add_update_label_weekly_logger.log(`=`.repeat(60));
+    logger.log(``);
+    logger.log(`=`.repeat(60));
+    logger.log(`Add Update Label Weekly - completed successfully`);
+    logger.log(`=`.repeat(60));
     
   } catch (error) {
-    add_update_label_weekly_logger.log(``);
-    add_update_label_weekly_logger.log(`=`.repeat(60));
-    add_update_label_weekly_logger.log(`Add Update Label Weekly - failed`);
-    add_update_label_weekly_logger.log(`=`.repeat(60));
+    logger.log(``);
+    logger.log(`=`.repeat(60));
+    logger.log(`Add Update Label Weekly - failed`);
+    logger.log(`=`.repeat(60));
     if (error.stack) {
       console.error(`Stack trace: ${error.stack}`);
     }
@@ -36981,6 +36984,8 @@ function getDefaultConfigs() {
       'HackforLABot',
     ],
 
+    teamSlackChannel: '',
+
     timezone: 'America/Los_Angeles',
     
     commentTemplate: getDefaultCommentTemplate(),
@@ -37007,12 +37012,11 @@ the \`\${label}\` label and add the \`\${statusUpdated}\` label.
 
 If you need help, be sure to either: 1) place your issue in the "\${questionsStatus}" status column of the 
 Project Board and ask for help at your next meeting; 2) put a \`\${statusHelpWanted}\` label on your issue 
-and pull request; or 3) put up a request for assistance on the team's <teamSlackChannel> Slack channel.  
+and pull request; or 3) put up a request for assistance on the team's \${teamSlackChannel} Slack channel.  
 
 Please note that including your questions in the issue comments- along with screenshots, if applicable- 
 will help us to help you. [Here](https://github.com/hackforla/website/issues/1619#issuecomment-897315561) and [here](https://github.com/hackforla/website/issues/1908#issuecomment-877908152) are examples of well-formed questions.
 
-Thanks for being part of HfLA!
 
 <sub>You are receiving this comment because your last comment was before \${cutoffTime}.</sub>`;
 }
