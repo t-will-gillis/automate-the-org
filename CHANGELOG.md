@@ -14,20 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs: Troubleshooting guide
 
 ## [Unreleased]
-_No unreleased changes yet._
-
-## v0.5.1
-2025-11-25
 - bug: fix incorrect path to `manage-issue-timeline.js`
 - bug: fix incorrect debug log statement
 - bug: adding troubleshooting step to debug `queryIssueInfo.js`
-
+- bug: fix incorrrect `isCommentByAssignees()` parameters
 
 ## v0.5.0
 2025-11-24
 - refactor: recreated all files to preserve history
-
-
 
 ## v0.4.4
 2025-11-16
