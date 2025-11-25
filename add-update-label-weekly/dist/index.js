@@ -167,7 +167,7 @@ function isTimelineOutdated(timeline, issueNum, assignees) { // assignees is an 
       const issueState = eventObj.source?.issue?.state;
       const isPR = eventObj.source?.issue?.pull_request;
    
-      if (issueState === 'open' && isCommentByAssignees(data, assignees)) {
+      if (issueState === 'open' && isCommentByAssignees(eventObj, assignees)) {
         logger.info(`Issue #${issueNum}: Assignee fixes/resolves/closes issue with an open pull request, remove all update-related labels`);
         return { result: false, labels: '' };
       }
@@ -179,9 +179,9 @@ function isTimelineOutdated(timeline, issueNum, assignees) { // assignees is an 
     let eventTimestamp = eventObj.updated_at || eventObj.created_at;
 
     // Update for the most recent 'lastCommentTimestamp' or 'lastAssignedTimestamp' 
-    if (!lastCommentTimestamp && eventType === 'commented' && isCommentByAssignees(data, assignees)) {
+    if (!lastCommentTimestamp && eventType === 'commented' && isCommentByAssignees(eventObj, assignees)) {
       lastCommentTimestamp = eventTimestamp;
-    } else if (!lastAssignedTimestamp && eventType === 'assigned' && isCommentByAssignees(data, assignees)) {
+    } else if (!lastAssignedTimestamp && eventType === 'assigned' && isCommentByAssignees(eventObj, assignees)) {
       lastAssignedTimestamp = eventTimestamp;
     }
 
