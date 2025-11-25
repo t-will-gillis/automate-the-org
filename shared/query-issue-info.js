@@ -40,7 +40,7 @@ async function queryIssueInfo(github, context, issueNum) {
 
   try {
     const response = await github.graphql(query, variables);
-    console.log(JSON.stringify(response, null, 2));   // Debug: log full response
+
     // Extract the list of project items associated with the issue
     const projectData = response.repository.issue.projectItems.nodes;
 
