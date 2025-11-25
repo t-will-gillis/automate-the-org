@@ -201,7 +201,7 @@ function isTimelineOutdated(timeline, issueNum, assignees) { // assignees is an 
   minimizeComments(commentsToBeMinimized);
 
   // Determine the latest activity timestamp and activity type
-  const [ lastActivityTimestamp, lastActivityType ] =
+  let [ lastActivityTimestamp, lastActivityType ] =
     lastCommentTimestamp > lastAssignedTimestamp
     ? [lastCommentTimestamp, 'Assignee\'s last comment']
     : [lastAssignedTimestamp, 'Assignee\'s assignment'];
