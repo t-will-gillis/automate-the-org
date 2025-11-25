@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 _No unreleased changes yet._
 
+## v0.5.2
+2025-11-25
+- bug: fix assignment to constant
+
 ## v0.5.1
 2025-11-25
 - bug: fix incorrect path to `manage-issue-timeline.js`
