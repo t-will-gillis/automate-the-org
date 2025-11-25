@@ -34728,7 +34728,7 @@ async function queryIssueInfo(github, context, issueNum) {
 
   try {
     const response = await github.graphql(query, variables);
-
+    console.log(JSON.stringify(response, null, 2));   // Debug: log full response
     // Extract the list of project items associated with the issue
     const projectData = response.repository.issue.projectItems.nodes;
 
@@ -34982,7 +34982,7 @@ async function resolveLabels({
   for (let labelKey of allLabelKeys) {
     if (labelDirectory[labelKey]) {
       resolvedLabels[labelKey] = labelDirectory[labelKey][0];
-      logger.debug(`Mapped ${labelKey}: "${labelDirectory[labelKey]}"`);
+      logger.debug(`Mapped ${labelKey}: "${labelDirectory[labelKey][0]}"`);
     } else if (optionalLabelKeys.includes(labelKey)) {
       logger.warn(`Optional ${labelKey} not found - skipping`);
     }
