@@ -2,7 +2,7 @@
 const { logger } = require('../shared/format-log-messages');
 const queryIssueInfo = require('../shared/query-issue-info');
 const findLinkedIssue = require('../shared/find-linked-issue');
-const { setLocalTime, getIssueTimeline } = require('../shared/get-issue-timeline');
+const { setLocalTime, getIssueTimeline } = require('../shared/manage-issue-timeline');
 const { addLabels, removeLabels } = require('../shared/manage-issue-labels');
 const minimizeIssueComment = require('../shared/hide-issue-comment');
 
