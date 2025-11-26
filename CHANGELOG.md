@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs: Troubleshooting guide
 
 ## [Unreleased]
+_No unreleased changes yet._
+
+## v0.5.3
+2025-11-25
 - style: adjusted logging for add and remove labels
 - bug: fix replacement of teamSlackChannel in bot message
 
