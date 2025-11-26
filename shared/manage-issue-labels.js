@@ -19,10 +19,10 @@ async function addLabels(github, context, config, issueNum, ...labelsToAdd) {
       issue_number: issueNum,
       labels: labelsToAdd,
     });
-    logger.info(` '${labelsToAdd}' label has been added`);
+    logger.info(`  '${labelsToAdd}' label has been added`);
     // If an error is found, the rest of the script does not stop.
   } catch (err) {
-    logger.error(`Function failed to add labels. Please refer to the error below: \n `, err);
+    logger.error(`Issue #${issueNum}: Failed to add '${labelsToAdd}': ${err}`);
   }
 }
 
@@ -36,7 +36,7 @@ async function addLabels(github, context, config, issueNum, ...labelsToAdd) {
 async function removeLabels(github, context, config, issueNum, ...labelsToRemove) {
   for (let label of labelsToRemove) {
     if (config.dryRun) {
-      logger.debug(` Would remove '${label}' from issue #${issueNum}`);
+      logger.debug(`  Would remove '${label}' from issue #${issueNum}`);
       continue;
     }
     try {
@@ -47,12 +47,10 @@ async function removeLabels(github, context, config, issueNum, ...labelsToRemove
         issue_number: issueNum,
         name: label,
       });
-      logger.info(` '${label}' label has been removed`);
+      logger.info(`  '${label}' label has been removed`);
     } catch (err) {
-      if (err.status === 404) {
-        logger.log(` '${label}' label not found, no need to remove`);
-      } else {
-        logger.error(`Function failed to remove labels. Please refer to the error below: \n `, err);
+      if (err.status !== 404) {
+        logger.error(`Issue #${issueNum} failed to remove '${label}': ${err}`);
       }
     }
   }
