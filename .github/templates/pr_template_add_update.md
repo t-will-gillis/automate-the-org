@@ -58,7 +58,6 @@ Monitors open, assigned issues with the default status "In progress (actively wo
     - `github-actions/workflow-configs/add-update-label-weekly-config.yml`
       - Review `timeframes:`, `projectBoard:` column-status names, and the `required:` and `ignored:` labels.
     - `github-actions/workflow-configs/templates/add-update-instructions-template.md`
-      - Update `<teamSlackChannel>`
       - Otherwise, we recommend keeping this version but of course it can be edited as needed
     - `github-actions/workflow-configs/_data/label-directory.json`
       - Make sure that your `label-directory.json` file maps these `keys`:

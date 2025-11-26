@@ -2,7 +2,7 @@
 const { logger } = require('../shared/format-log-messages');
 const queryIssueInfo = require('../shared/query-issue-info');
 const findLinkedIssue = require('../shared/find-linked-issue');
-const { setLocalTime, getIssueTimeline } = require('../shared/get-issue-timeline');
+const { setLocalTime, getIssueTimeline } = require('../shared/manage-issue-timeline');
 const { addLabels, removeLabels } = require('../shared/manage-issue-labels');
 const minimizeIssueComment = require('../shared/hide-issue-comment');
 
@@ -161,7 +161,7 @@ function isTimelineOutdated(timeline, issueNum, assignees) { // assignees is an 
       const issueState = eventObj.source?.issue?.state;
       const isPR = eventObj.source?.issue?.pull_request;
    
-      if (issueState === 'open' && isCommentByAssignees(data, assignees)) {
+      if (issueState === 'open' && isCommentByAssignees(eventObj, assignees)) {
         logger.info(`Issue #${issueNum}: Assignee fixes/resolves/closes issue with an open pull request, remove all update-related labels`);
         return { result: false, labels: '' };
       }
@@ -173,9 +173,9 @@ function isTimelineOutdated(timeline, issueNum, assignees) { // assignees is an 
     let eventTimestamp = eventObj.updated_at || eventObj.created_at;
 
     // Update for the most recent 'lastCommentTimestamp' or 'lastAssignedTimestamp' 
-    if (!lastCommentTimestamp && eventType === 'commented' && isCommentByAssignees(data, assignees)) {
+    if (!lastCommentTimestamp && eventType === 'commented' && isCommentByAssignees(eventObj, assignees)) {
       lastCommentTimestamp = eventTimestamp;
-    } else if (!lastAssignedTimestamp && eventType === 'assigned' && isCommentByAssignees(data, assignees)) {
+    } else if (!lastAssignedTimestamp && eventType === 'assigned' && isCommentByAssignees(eventObj, assignees)) {
       lastAssignedTimestamp = eventTimestamp;
     }
 
@@ -195,7 +195,7 @@ function isTimelineOutdated(timeline, issueNum, assignees) { // assignees is an 
   minimizeComments(commentsToBeMinimized);
 
   // Determine the latest activity timestamp and activity type
-  const [ lastActivityTimestamp, lastActivityType ] =
+  let [ lastActivityTimestamp, lastActivityType ] =
     lastCommentTimestamp > lastAssignedTimestamp
     ? [lastCommentTimestamp, 'Assignee\'s last comment']
     : [lastAssignedTimestamp, 'Assignee\'s assignment'];
@@ -286,6 +286,7 @@ function formatComment(assignees, labelString, cutoffTime) {
     .replace(/\$\{statusUpdated\}/g, labels.statusUpdated || 'Status: Updated')
     .replace(/\$\{questionsStatus\}/g, config.projectBoard.questionsStatus || 'Questions / In Review')
     .replace(/\$\{statusHelpWanted\}/g, labels.statusHelpWanted || 'Status: Help Wanted')
+    .replace(/\$\{teamSlackChannel\}/g, config.teamSlackChannel || '')
     .replace(/\$\{cutoffTime\}/g, cutoffTimeString);
 
   return completedInstructions;

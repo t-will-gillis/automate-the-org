@@ -16,11 +16,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 _No unreleased changes yet._
 
+## v0.5.3
+2025-11-25
+- style: adjusted logging for add and remove labels
+- bug: fix replacement of teamSlackChannel in bot message
+
+## v0.5.2
+2025-11-25
+- bug: fix assignment to constant
+
+## v0.5.1
+2025-11-25
+- bug: fix incorrect path to `manage-issue-timeline.js`
+- bug: fix incorrect debug log statement
+- bug: adding troubleshooting step to debug `queryIssueInfo.js`
+- bug: fix incorrect `isCommentByAssignees()` parameters
+
 ## v0.5.0
 2025-11-24
 - refactor: recreated all files to preserve history
-
-
 
 ## v0.4.4
 2025-11-16

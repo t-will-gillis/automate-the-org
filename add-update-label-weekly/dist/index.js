@@ -8,7 +8,7 @@
 const { logger } = __nccwpck_require__(2515);
 const queryIssueInfo = __nccwpck_require__(1563);
 const findLinkedIssue = __nccwpck_require__(8733);
-const { setLocalTime, getIssueTimeline } = __nccwpck_require__(5616);
+const { setLocalTime, getIssueTimeline } = __nccwpck_require__(2763);
 const { addLabels, removeLabels } = __nccwpck_require__(4603);
 const minimizeIssueComment = __nccwpck_require__(7688);
 
@@ -167,7 +167,7 @@ function isTimelineOutdated(timeline, issueNum, assignees) { // assignees is an 
       const issueState = eventObj.source?.issue?.state;
       const isPR = eventObj.source?.issue?.pull_request;
    
-      if (issueState === 'open' && isCommentByAssignees(data, assignees)) {
+      if (issueState === 'open' && isCommentByAssignees(eventObj, assignees)) {
         logger.info(`Issue #${issueNum}: Assignee fixes/resolves/closes issue with an open pull request, remove all update-related labels`);
         return { result: false, labels: '' };
       }
@@ -179,9 +179,9 @@ function isTimelineOutdated(timeline, issueNum, assignees) { // assignees is an 
     let eventTimestamp = eventObj.updated_at || eventObj.created_at;
 
     // Update for the most recent 'lastCommentTimestamp' or 'lastAssignedTimestamp' 
-    if (!lastCommentTimestamp && eventType === 'commented' && isCommentByAssignees(data, assignees)) {
+    if (!lastCommentTimestamp && eventType === 'commented' && isCommentByAssignees(eventObj, assignees)) {
       lastCommentTimestamp = eventTimestamp;
-    } else if (!lastAssignedTimestamp && eventType === 'assigned' && isCommentByAssignees(data, assignees)) {
+    } else if (!lastAssignedTimestamp && eventType === 'assigned' && isCommentByAssignees(eventObj, assignees)) {
       lastAssignedTimestamp = eventTimestamp;
     }
 
@@ -201,7 +201,7 @@ function isTimelineOutdated(timeline, issueNum, assignees) { // assignees is an 
   minimizeComments(commentsToBeMinimized);
 
   // Determine the latest activity timestamp and activity type
-  const [ lastActivityTimestamp, lastActivityType ] =
+  let [ lastActivityTimestamp, lastActivityType ] =
     lastCommentTimestamp > lastAssignedTimestamp
     ? [lastCommentTimestamp, 'Assignee\'s last comment']
     : [lastAssignedTimestamp, 'Assignee\'s assignment'];
@@ -292,6 +292,7 @@ function formatComment(assignees, labelString, cutoffTime) {
     .replace(/\$\{statusUpdated\}/g, labels.statusUpdated || 'Status: Updated')
     .replace(/\$\{questionsStatus\}/g, config.projectBoard.questionsStatus || 'Questions / In Review')
     .replace(/\$\{statusHelpWanted\}/g, labels.statusHelpWanted || 'Status: Help Wanted')
+    .replace(/\$\{teamSlackChannel\}/g, config.teamSlackChannel || '')
     .replace(/\$\{cutoffTime\}/g, cutoffTimeString);
 
   return completedInstructions;
@@ -34555,10 +34556,10 @@ async function addLabels(github, context, config, issueNum, ...labelsToAdd) {
       issue_number: issueNum,
       labels: labelsToAdd,
     });
-    logger.info(` '${labelsToAdd}' label has been added`);
+    logger.info(`  '${labelsToAdd}' label has been added`);
     // If an error is found, the rest of the script does not stop.
   } catch (err) {
-    logger.error(`Function failed to add labels. Please refer to the error below: \n `, err);
+    logger.error(`Issue #${issueNum}: Failed to add '${labelsToAdd}': ${err}`);
   }
 }
 
@@ -34572,7 +34573,7 @@ async function addLabels(github, context, config, issueNum, ...labelsToAdd) {
 async function removeLabels(github, context, config, issueNum, ...labelsToRemove) {
   for (let label of labelsToRemove) {
     if (config.dryRun) {
-      logger.debug(` Would remove '${label}' from issue #${issueNum}`);
+      logger.debug(`  Would remove '${label}' from issue #${issueNum}`);
       continue;
     }
     try {
@@ -34583,18 +34584,101 @@ async function removeLabels(github, context, config, issueNum, ...labelsToRemove
         issue_number: issueNum,
         name: label,
       });
-      logger.info(` '${label}' label has been removed`);
+      logger.info(`  '${label}' label has been removed`);
     } catch (err) {
-      if (err.status === 404) {
-        logger.log(` '${label}' label not found, no need to remove`);
-      } else {
-        logger.error(`Function failed to remove labels. Please refer to the error below: \n `, err);
+      if (err.status !== 404) {
+        logger.error(`Issue #${issueNum} failed to remove '${label}': ${err}`);
       }
     }
   }
 }
 
 module.exports = { addLabels, removeLabels }
+
+/***/ }),
+
+/***/ 2763:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+// Import modules
+const { logger } = __nccwpck_require__(2515);
+
+/**
+ * Default returns the current date and time in Los Angeles time (PST/PDT)
+ * formatted as a string.
+ *
+ * The output format is: `YYYY/MM/DD HH:MM TZ`, where `TZ` is either
+ * PST or PDT depending on daylight saving time.
+ *
+ * @param {String} datetime                         - The date and time string from the event
+ * @param {String} [timezone='America/Los_Angeles'] - Optional IANA timezone string
+ * @returns {String}                                - Formatted date and time string for timezone
+ */
+function setLocalTime(datetime, timezone = 'America/Los_Angeles') {
+  // Validate timezone input
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: timezone });
+  } catch (e) {
+    logger.warn(`Invalid timezone specified: '${timezone}', defaulting to 'America/Los_Angeles'`);
+    timezone = 'America/Los_Angeles';
+  }
+
+  // Create notification time string in PST/PDT
+  return new Date(datetime).toLocaleString("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZoneName: "short",
+  });
+}
+
+
+
+/**
+ * Function that returns the timeline of an issue
+ * @param {Object} github                 - GitHub object from actions/github-script
+ * @param {Object} context                - context object from actions/github-script
+ * @param {Number} issueNum               - the issue number
+ * @returns {Array<Object>} timelineArray - an array containing the timeline of issue events
+ */
+async function getIssueTimeline(github, context, issueNum) {
+
+  let timelineArray = [];
+  let page = 1;
+
+  while (true) {
+    try {
+      // https://docs.github.com/en/rest/issues/timeline?apiVersion=2022-11-28#list-timeline-events-for-an-issue
+      const results = await github.request('GET /repos/{owner}/{repo}/issues/{issue_number}/timeline', {
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        issue_number: issueNum,
+        per_page: 100,
+        page: page,
+      });
+
+      // If the API call returns an empty array, break out of loop- there is no additional data.
+      // Else if data is returned, push it to `timelineArray` and increase the page number (`page`)
+      if (!results.data.length) {
+        break;
+      } else {
+        timelineArray.push(...results.data);
+        page++;
+      }
+    } catch (err) {
+      logger.error(`Error fetching issue timeline (page ${page}):`, err);
+      break;
+    }
+  }
+  return timelineArray;
+}
+
+module.exports = { setLocalTime, getIssueTimeline };
+
 
 /***/ }),
 
@@ -34897,7 +34981,7 @@ async function resolveLabels({
   for (let labelKey of allLabelKeys) {
     if (labelDirectory[labelKey]) {
       resolvedLabels[labelKey] = labelDirectory[labelKey][0];
-      logger.debug(`Mapped ${labelKey}: "${labelDirectory[labelKey]}"`);
+      logger.debug(`Mapped ${labelKey}: "${labelDirectory[labelKey][0]}"`);
     } else if (optionalLabelKeys.includes(labelKey)) {
       logger.warn(`Optional ${labelKey} not found - skipping`);
     }
@@ -34915,14 +34999,6 @@ async function resolveLabels({
 }
 
 module.exports = { resolve:resolveLabels };
-
-/***/ }),
-
-/***/ 5616:
-/***/ ((module) => {
-
-module.exports = eval("require")("../shared/get-issue-timeline");
-
 
 /***/ }),
 
