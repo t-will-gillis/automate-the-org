@@ -286,6 +286,7 @@ function formatComment(assignees, labelString, cutoffTime) {
     .replace(/\$\{statusUpdated\}/g, labels.statusUpdated || 'Status: Updated')
     .replace(/\$\{questionsStatus\}/g, config.projectBoard.questionsStatus || 'Questions / In Review')
     .replace(/\$\{statusHelpWanted\}/g, labels.statusHelpWanted || 'Status: Help Wanted')
+    .replace(/\$\{teamSlackChannel\}/g, config.teamSlackChannel || '')
     .replace(/\$\{cutoffTime\}/g, cutoffTimeString);
 
   return completedInstructions;
