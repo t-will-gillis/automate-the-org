@@ -36,6 +36,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ github.event.inputs.source_repo }}
+          path: central
+          
       - name: Generate token from GitHub App
         id: generate-app-token
         run: |
@@ -113,11 +119,60 @@ jobs:
 
       - name: Prepare variables
         run: |
-          echo "TARGET_REPO=${{ github.event.inputs.target_repo }}" >> $GITHUB_ENV
-          echo "SOURCE_REPO=${{ github.event.inputs.source_repo }}" >> $GITHUB_ENV
-          echo "ROLLOUT_BRANCH=${{ github.event.inputs.rollout_branch }}" >> $GITHUB_ENV
-          echo "TEMPLATE_FILE=${{ github.event.inputs.template_file }}" >> $GITHUB_ENV
-          echo "DRY_RUN=${{ github.event.inputs.dry_run }}" >> $GITHUB_ENV
+          TARGET_REPO="${{ github.event.inputs.target_repo }}"
+          SOURCE_REPO="${{ github.event.inputs.source_repo }}"
+          ROLLOUT_BRANCH="${{ github.event.inputs.rollout_branch }}"
+          TEMPLATE_FILE="${{ github.event.inputs.template_file }}"
+          DRY_RUN="${{ github.event.inputs.dry_run }}"
+          PROJECT_NAME=$(echo "${TARGET_REPO}" | cut -d'/' -f2)
+          ORG_NAME=$(echo "$SOURCE_REPO" | cut -d'/' -f1)
+                 
+          echo "TARGET_REPO=${TARGET_REPO}" >> $GITHUB_ENV
+          echo "SOURCE_REPO=${SOURCE_REPO}" >> $GITHUB_ENV
+          echo "ROLLOUT_BRANCH=${ROLLOUT_BRANCH}" >> $GITHUB_ENV
+          echo "TEMPLATE_FILE=${TEMPLATE_FILE}" >> $GITHUB_ENV
+          echo "DRY_RUN=${DRY_RUN}" >> $GITHUB_ENV
+          echo "PROJECT_NAME=${PROJECT_NAME}" >> $GITHUB_ENV
+          echo "ORG_NAME=${ORG_NAME}" >> $GITHUB_ENV
+
+      - name: Check whether label-directory.json exists in target repo
+        id: check-target-label-dir
+        run: |
+          DEST_FILEPATH="github-actions/workflow-configs/_data/label-directory.json"
+          if [ -f "$DEST_FILEPATH" ]; then
+            echo "TARGET_EXISTS=true" >> $GITHUB_ENV
+            echo "Label directory file exists in target repo. Do not overwrite."
+          else
+            echo "TARGET_EXISTS=false" >> $GITHUB_ENV
+            echo "Label directory file does not exist in target repo. Checking source..."
+          fi
+
+          echo "DEST_FILEPATH=$DEST_FILEPATH" >> $GITHUB_ENV
+
+      - name: Check whether label-directory.{PROJECT_NAME}.json exists in source repo
+        id: check-source-label-dir
+        run: |
+          if [[ "$TARGET_EXISTS" == "true" ]]; then
+            echo "Skip source check because target exists."
+            exit 0
+          fi
+
+          SRC_FILENAME="label-directory.${PROJECT_NAME}.json"
+          SRC_FILEPATH="central/example-configs/$SRC_FILENAME"
+
+          if [ -f "$SRC_FILEPATH" ]; then
+            echo "SOURCE_EXISTS=true" >> $GITHUB_ENV
+            echo "Label directory file exists in source repo. Proceeding..."
+          else
+            echo "SOURCE_EXISTS=false" >> $GITHUB_ENV
+            echo "Label directory file does not exist in source repo."
+            echo " ⮡  Run Rollout Project Label Directory first. Exiting..."
+            exit 1
+          fi
+
+          # persist for downstream steps
+          echo "SRC_FILENAME=$SRC_FILENAME" >> $GITHUB_ENV
+          echo "SRC_FILEPATH=$SRC_FILEPATH" >> $GITHUB_ENV
 
       - name: Checkout source repo
         uses: actions/checkout@v5
@@ -187,6 +242,19 @@ jobs:
           
           echo "Parsed and resolved config_files.json:"
           cat config_files.json
+
+      - name: Append source file if needed
+        run: |
+          # Only append if target file does NOT exist but source file DOES exist
+          if [[ "$TARGET_EXISTS" == "false" && "$SOURCE_EXISTS" == "true" ]]; then
+            echo "Appending label-directory.json to config_files.json"
+
+            jq --arg src "$SRC_FILEPATH" --arg dest "$DEST_FILEPATH" \
+              '. += [{src: $src, dest: $dest}]' config_files.json > config_files_temp.json
+            mv config_files_temp.json config_files.json
+
+            echo "Appended $SRC_FILEPATH -> $DEST_FILEPATH to config_files.json"
+          fi
 
       - name: Extract workflow name from workflow source
         run: |
