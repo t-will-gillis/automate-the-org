@@ -1,28 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-# To use: Run this after all changes have been made and committed (see `README.md`` and `CHANGELOG.md``).
-# To update the upstream remote: Run `./auto-update-master.sh` after committing your changes to master.
+# To use: Run after committing all changes (see `README.md` and `CHANGELOG.md`).
+# Updates the version tag for the CURRENT_BRANCH of the remote ORIGIN.
+# Use `./auto-update-master.sh` for versioning master on remote UPSTREAM.
 
 # --- CONFIG ---
 CHANGELOG="CHANGELOG.md"
 PACKAGE_JSON="package.json"
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-
-# --- 0. Confirm that upstream remote exists ---
-if ! git remote get-url upstream &>/dev/null; then
-  echo -e "\n⚠️ No 'upstream' remote found."
-  echo -e "Please set it before continuing, e.g.:"
-  echo -e "  git remote add upstream https://github.com/ORG/REPO.git\n"
-  read -rp "Continue without pushing to upstream? (y/N) " CONTINUE_ANYWAY
-  if [[ ! "$CONTINUE_ANYWAY" =~ ^[Yy]$ ]]; then
-    echo "Release canceled. Configure 'upstream' and re-run."
-    exit 1
-  fi
-  UPSTREAM_MISSING=true
-else
-  UPSTREAM_MISSING=false
-fi
 
 # --- 1. Get last git tag ---
 LAST_TAG=$(git tag --sort=version:refname | tail -n1)
@@ -39,7 +25,7 @@ else
   exit 1
 fi
 
-# --- 1.5. Confirm branch ---
+# --- 2. Confirm branch ---
 echo -e "\n⚠️ You are working on: --> $CURRENT_BRANCH\n"
 read -rp "Proceed with this branch? (y/N) " CONFIRM
 if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
@@ -47,10 +33,10 @@ if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
   exit 0
 fi
 
-# --- 2. Show last version ---
+# --- 3. Show last version ---
 echo "Last version: $LAST_TAG"
 
-# --- 3. Extract [Unreleased] changes ---
+# --- 4. Extract [Unreleased] changes ---
 UNRELEASED_CHANGES=$(awk '/## \[Unreleased\]/{flag=1;next}/^## /{flag=0}flag' "$CHANGELOG")
 
 if [ -z "$UNRELEASED_CHANGES" ]; then
@@ -60,7 +46,7 @@ fi
 
 echo -e "\nChanges to release:\n$UNRELEASED_CHANGES"
 
-# --- 4. Ask user for increment type ---
+# --- 5. Ask user for increment type ---
 echo -e "\nSpecify version increment (patch/minor/major):"
 read -r INCREMENT
 
@@ -75,32 +61,32 @@ NEW_VERSION="v$MAJOR.$MINOR.$PATCH"
 echo -e "\nProposed new version: $LAST_TAG --> $NEW_VERSION"
 echo -e "\nIncludes the following changes:\n$UNRELEASED_CHANGES"
 
-# --- 5. Confirm release ---
+# --- 6. Confirm release ---
 read -rp "Proceed with this release? (y/N) " CONFIRM
 if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
   echo "Release canceled. Fix changelog or choose a different version."
   exit 0
 fi
 
-# --- 6. Update package.json and package-lock.json version ---
+# --- 7. Update package.json and package-lock.json version ---
 if [ -f "$PACKAGE_JSON" ]; then
   npm version "$MAJOR.$MINOR.$PATCH" --no-git-tag-version >/dev/null 2>&1
   echo "Updated package.json and package-lock.json to $MAJOR.$MINOR.$PATCH"
 fi
 
-# --- 6.5. Check if tag already exists ---
+# --- 8. Check if tag already exists ---
 if git rev-parse "$NEW_VERSION" >/dev/null 2>&1; then
   echo "❌ Tag $NEW_VERSION already exists. Exiting."
   exit 1
 fi
 
-# --- 7. Create annotated git tag ---
+# --- 9. Create annotated git tag ---
 git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION
 
 Changes:
 $UNRELEASED_CHANGES"
 
-# --- 8. Update CHANGELOG.md ---
+# --- 10. Update CHANGELOG.md ---
 DATE=$(date +%F)
 TMP_FILE=$(mktemp)
 
@@ -120,30 +106,31 @@ BEGIN {printed=0}
 
 mv "$TMP_FILE" "$CHANGELOG"
 
-# --- 9. Commit updated files ---
+# --- 11. Commit updated files ---
 git add "$CHANGELOG" "$PACKAGE_JSON"
 git commit -m "Update CHANGELOG and package.json for $NEW_VERSION release"
 
-# --- 10. Push changes to origin---
-git push origin "$CURRENT_BRANCH"
-git push origin "$NEW_VERSION"
-
-# --- 11. Push tag to upstream (if available) ---
-if [ "$UPSTREAM_MISSING" = false ]; then
-  echo -e "\nPushing tag $NEW_VERSION to upstream..."
-  git push upstream "$NEW_VERSION"
-  echo "Tag $NEW_VERSION pushed successfully to upstream."
-else
-  echo -e "\n⚠️ Skipped pushing to upstream (remote not set)."
-fi
+# --- 12. Push changes to origin---
+git push origin $CURRENT_BRANCH
+git push origin $NEW_VERSION
 
 echo -e "\n✅ Release $NEW_VERSION created and pushed successfully!"
 
-# --- 12. Update major version tag ---
-# MAJOR_TAG="v$MAJOR"
-# git tag -fa "$MAJOR_TAG" -m "Update $MAJOR_TAG to $NEW_VERSION"
-# git push origin "$MAJOR_TAG" --force
-# echo -e "\n✅ Major tag $MAJOR_TAG updated to $NEW_VERSION"
+# --- 13. Update major version tag (ensure it points to commit) ---
+MAJOR_TAG="v$MAJOR"
+git tag -fa $MAJOR_TAG $NEW_VERSION^{} -m "Update $MAJOR_TAG to $NEW_VERSION"
 
-# --- 13. Reminder to update master ---
+# Verification step
+MAJOR_SHA=$(git rev-parse $MAJOR_TAG^{})
+NEW_SHA=$(git rev-parse $NEW_VERSION^{})
+if [ "$MAJOR_SHA" != "$NEW_SHA" ]; then
+  echo "❌ Major tag verification failed. Aborting push."
+  exit 1
+fi
+
+git push origin $MAJOR_TAG --force
+
+echo -e "\n✅ Major tag $MAJOR_TAG updated to $NEW_VERSION"
+
+# --- 14. Reminder to update master ---
 echo -e "\n🔔 Reminder: Run './auto-update-master.sh' to update the master branch with the latest changes."
