@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+_No unreleased changes yet._
+
+## v0.6.0
+2025-12-03
 - docs: remove "Planned-for-Future" `CHANGELOG.md`
 - refactor: edits to initial inputs `rollout-workflow-to-project.yml`
 - refactor: edits to initial inputs `rollout-project-label-directory.yml`
