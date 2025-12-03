@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # To use: Run this after all changes have been made and committed (see `README.md`` and `CHANGELOG.md``).
 # To update the upstream remote: Run `./auto-update-master.sh` after committing your changes to master.
@@ -11,12 +11,10 @@ CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 # --- 0. Confirm that upstream remote exists ---
 if ! git remote get-url upstream &>/dev/null; then
-  echo ""
-  echo "⚠️ No 'upstream' remote found."
-  echo "Please set it before continuing, e.g.:"
-  echo "  git remote add upstream https://github.com/ORG/REPO.git"
-  echo ""
-  read -p "Continue without pushing to upstream? (y/N) " CONTINUE_ANYWAY
+  echo -e "\n⚠️ No 'upstream' remote found."
+  echo -e "Please set it before continuing, e.g.:"
+  echo -e "  git remote add upstream https://github.com/ORG/REPO.git\n"
+  read -rp "Continue without pushing to upstream? (y/N) " CONTINUE_ANYWAY
   if [[ ! "$CONTINUE_ANYWAY" =~ ^[Yy]$ ]]; then
     echo "Release canceled. Configure 'upstream' and re-run."
     exit 1
@@ -27,7 +25,8 @@ else
 fi
 
 # --- 1. Get last git tag ---
-LAST_TAG=$(git tag --sort=-creatordate | head -n1 || echo "v0.0.0")
+LAST_TAG=$(git tag --sort=version:refname | tail -n1)
+LAST_TAG=${LAST_TAG:-"v0.0.0"}
 
 # Extract major.minor.patch numbers
 VERSION_REGEX="v([0-9]+)\.([0-9]+)\.([0-9]+)"
@@ -41,10 +40,8 @@ else
 fi
 
 # --- 1.5. Confirm branch ---
-echo ""
-echo "⚠️ You are working on: --> $CURRENT_BRANCH"
-echo ""
-read -p "Proceed with this branch? (y/N) " CONFIRM
+echo -e "\n⚠️ You are working on: --> $CURRENT_BRANCH\n"
+read -rp "Proceed with this branch? (y/N) " CONFIRM
 if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
   echo "Release canceled. Change to the desired branch. Exiting."
   exit 0
@@ -57,14 +54,14 @@ echo "Last version: $LAST_TAG"
 UNRELEASED_CHANGES=$(awk '/## \[Unreleased\]/{flag=1;next}/^## /{flag=0}flag' "$CHANGELOG")
 
 if [ -z "$UNRELEASED_CHANGES" ]; then
-  echo "⚠️ No changes found in [Unreleased] section! Exiting."
+  echo "⚠️ No changes found in [Unreleased] section. Exiting."
   exit 1
 fi
 
 echo -e "\nChanges to release:\n$UNRELEASED_CHANGES"
 
 # --- 4. Ask user for increment type ---
-echo -e "\nChoose version increment (patch/minor/major):"
+echo -e "\nSpecify version increment (patch/minor/major):"
 read -r INCREMENT
 
 case $INCREMENT in
@@ -76,10 +73,10 @@ esac
 
 NEW_VERSION="v$MAJOR.$MINOR.$PATCH"
 echo -e "\nProposed new version: $LAST_TAG --> $NEW_VERSION"
-echo -e "\nWith the following changes:\n$UNRELEASED_CHANGES"
+echo -e "\nIncludes the following changes:\n$UNRELEASED_CHANGES"
 
 # --- 5. Confirm release ---
-read -p "Proceed with this release? (y/N) " CONFIRM
+read -rp "Proceed with this release? (y/N) " CONFIRM
 if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
   echo "Release canceled. Fix changelog or choose a different version."
   exit 0
@@ -89,6 +86,12 @@ fi
 if [ -f "$PACKAGE_JSON" ]; then
   npm version "$MAJOR.$MINOR.$PATCH" --no-git-tag-version >/dev/null 2>&1
   echo "Updated package.json and package-lock.json to $MAJOR.$MINOR.$PATCH"
+fi
+
+# --- 6.5. Check if tag already exists ---
+if git rev-parse "$NEW_VERSION" >/dev/null 2>&1; then
+  echo "❌ Tag $NEW_VERSION already exists. Exiting."
+  exit 1
 fi
 
 # --- 7. Create annotated git tag ---
@@ -127,13 +130,20 @@ git push origin "$NEW_VERSION"
 
 # --- 11. Push tag to upstream (if available) ---
 if [ "$UPSTREAM_MISSING" = false ]; then
-  echo ""
-  echo "Pushing tag $NEW_VERSION to upstream..."
+  echo -e "\nPushing tag $NEW_VERSION to upstream..."
   git push upstream "$NEW_VERSION"
   echo "Tag $NEW_VERSION pushed successfully to upstream."
 else
-  echo ""
-  echo "⚠️ Skipped pushing to upstream (remote not set)."
+  echo -e "\n⚠️ Skipped pushing to upstream (remote not set)."
 fi
 
 echo -e "\n✅ Release $NEW_VERSION created and pushed successfully!"
+
+# --- 12. Update major version tag ---
+# MAJOR_TAG="v$MAJOR"
+# git tag -fa "$MAJOR_TAG" -m "Update $MAJOR_TAG to $NEW_VERSION"
+# git push origin "$MAJOR_TAG" --force
+# echo -e "\n✅ Major tag $MAJOR_TAG updated to $NEW_VERSION"
+
+# --- 13. Reminder to update master ---
+echo -e "\n🔔 Reminder: Run './auto-update-master.sh' to update the master branch with the latest changes."

@@ -5,19 +5,19 @@ on:
   workflow_dispatch:
     inputs:
       target_repo:
-        description: 'Provide the name of the target repo, e.g. "org/project"'
+        description: 'Target repo, e.g. "org/project":'
         required: true
-        type: string
+        default: 'hackforla/'
       source_repo:
-        description: 'Location of source files and automation trigger'
+        description: 'Source repo, e.g. "org/central-repo":'
         required: true
         default: 'hackforla/automate-the-org'
       github_app_name:
-        description: 'GitHub App name/slug'
+        description: 'GitHub App name/slug:'
         required: true
         default: 'hfla-workflow-rollout'
       dry_run:
-        description: 'Dry-run mode: preview changes without creating PRs'
+        description: 'Dry-run mode: preview changes only'
         type: boolean
         default: true
 
@@ -38,7 +38,7 @@ jobs:
           fi
 
       - name: Checkout source repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: ${{ github.event.inputs.source_repo }}
           path: central
@@ -119,7 +119,7 @@ jobs:
           echo "GitHub App installation token generated successfully"
 
       - name: Checkout target repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: ${{ github.event.inputs.target_repo }}
           path: target

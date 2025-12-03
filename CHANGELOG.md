@@ -5,16 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Planned-for-Future
-- Additional maintenance workflows
-- Enhanced error reporting
-- Label validation tools
-- feat: PROJECT_SETUP.md for consuming projects
-- docs: Comprehensive documentation and examples
-- docs: Troubleshooting guide
+
 
 ## [Unreleased]
-_No unreleased changes yet._
+- docs: remove "Planned-for-Future" `CHANGELOG.md`
+- refactor: edits to initial inputs `rollout-workflow-to-project.yml`
+- refactor: edits to initial inputs `rollout-project-label-directory.yml`
+- chore: update `actions/checkout@v5` --> `@v6`, 3 files
+- refactor: harmonize shell scripts with `echo -e "\n ..."
 
 ## v0.5.3
 2025-11-25
