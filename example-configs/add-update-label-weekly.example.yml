@@ -4,7 +4,7 @@ name: Add Update Label Weekly
 # ⓵ CUSTOMIZE: Change cron. Currently runs Fri 0700 UTC, exc. July and December
 #    ⮡ You can compose a schedule here: https://crontab.cronhub.io/
 # ⓶ CUSTOMIZE: Change to your project repo name
-# ⓷ Confirm that this is the most recent version
+# ⓷ Use major version only to keep up to date
 
 on:
   schedule:
@@ -32,7 +32,7 @@ jobs:
           private-key: ${{ secrets.HFLA_GRAPHQL_APP_PRIVATE_KEY }}
 
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Run workflow
         uses: hackforla/automate-the-org/add-update-label-weekly@v1 # ⓷ 

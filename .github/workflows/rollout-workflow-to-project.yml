@@ -4,26 +4,27 @@ on:
   workflow_dispatch:
     inputs:
       target_repo:
-        description: 'Provide the name of the target repo, e.g. "org/project"'
+        description: 'Target repo, e.g. "org/project":'
         required: true
+        default: 'hackforla/'
       source_repo:
-        description: 'Location of source files and automation trigger'
+        description: 'Source repo, e.g. "org/central-repo":'
         required: true
         default: 'hackforla/automate-the-org'
       rollout_branch:
-        description: 'Branch name created for PR for rollout'
+        description: 'Branch name for rollout PR:'
         required: false
         default: 'automation/rollout-central-workflow'
       template_file:
-        description: 'Template file name (must exist in .github/templates/)'
+        description: 'Template file (must exist in .github/templates/):'
         required: true
         default: 'pr_template_add_update.md'
       github_app_name:
-        description: 'GitHub App name/slug'
+        description: 'GitHub App name/slug:'
         required: true
         default: 'hfla-workflow-rollout'
       dry_run:
-        description: 'Dry-run mode: preview changes without creating PRs'
+        description: 'Dry-run mode: preview changes only'
         type: boolean
         default: true
 
@@ -37,7 +38,7 @@ jobs:
 
     steps:
       - name: Checkout source repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: ${{ github.event.inputs.source_repo }}
           path: central
@@ -175,7 +176,7 @@ jobs:
           echo "SRC_FILEPATH=$SRC_FILEPATH" >> $GITHUB_ENV
 
       - name: Checkout source repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: ${{ github.event.inputs.source_repo }}
           path: central
