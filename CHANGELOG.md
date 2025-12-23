@@ -239,12 +239,26 @@ git tag
 ```
 This should match the most recent version listed in this file and the latest version listed in [package.json](https://github.com/hackforla/automate-the-org/blob/master/package.json). If it doesn't, then you may need to manually correct the versions.
 
-4. Now run the automatic versioning utility. This will check whether you have set an `upstream`, and ask whether the next version should be a patch, minor, or major version change per [semver](https://semver.org/) (e.g. version MAJOR.MINOR.PATCH):
+4. Now run the automatic versioning utility. This will check whether you have set an `origin`, and ask whether the commits associated with the next version should increment the major, minor, or patch value per [semver](https://semver.org/) (e.g. version MAJOR.MINOR.PATCH). This will also update the MAJOR version tag (i.e '@vX') so that it references the current tag (i.e. '@vX.Y.Z).
 
+  ```bash
+  ./auto-release.sh
+  ```
 
-```bash
-./auto-release.sh
-```
+5. After committing changes to the `hackforla/automate-the-org/master`, be sure to update the versioning on the `upstream` remote:
+
+  ```bash
+  ./auto-update-master.sh
+  ```
+#### Manual versioning
+Only if you can't use the shell scripts...
+  ```bash  
+  git tag -a v1.0.3 -m "Release v1.0.3"
+  git push origin v1.0.3
+
+  git tag -fa v1 v1.0.3 -m "Update v1 to v1.0.3"
+  git push origin v1 --force
+  ```  
 
 #### Versioning adjustments
 Use the following for adjustments to the version tags (but only if you understand what you are doing!) 
