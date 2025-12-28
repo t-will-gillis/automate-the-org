@@ -70,7 +70,7 @@ Monitors open, assigned issues with the default status "In progress (actively wo
         - `keys` which tell the automation to skip the issue: 
           - _Note: For these `keys` only, OK to add or remove as needed_
           - `draft`  --> "draft"  _(confirm)_
-          - `er` --> _none found yet_
+          - `er` --> _none found: would be "ER"_
           - `epic` --> "epic"  _(confirm)_
           - `dependency` --> "Dependency"  _(confirm)_
           - `complexity0` --> _none found: should be "Complexity: Prework"_
