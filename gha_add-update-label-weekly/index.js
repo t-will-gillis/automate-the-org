@@ -143,9 +143,9 @@ function getDefaultConfigs() {
       'github-actions[bot]',
       'HackforLABot',
     ],
-
+    
     teamSlackChannel: '',
-
+    
     timezone: 'America/Los_Angeles',
     
     commentTemplate: getDefaultCommentTemplate(),
