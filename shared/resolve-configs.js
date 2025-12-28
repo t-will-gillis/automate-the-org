@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
 const { logger } = require('./format-log-messages');
-
+  
 /**
  * Resolves configuration by merging defaults, project config, and overrides
  * @param {Object} options
@@ -48,30 +48,12 @@ function resolveConfigs({
   // Deep merge: defaults < projectConfig < overrides
   const config = deepMerge(defaults, projectConfig, overrides);
   
-  // Load the bot's Add Update Instructions comment template, if exists
-    try {
-    const botCommentTemplatePath =
-      config.botCommentTemplatePath || 
-      'github-actions/workflow-configs/templates/add-update-instructions-template.md';
-
-    const fullPathTemplate = path.join(projectRepoPath, botCommentTemplatePath);
-
-    if (fs.existsSync(fullPathTemplate)) {
-      config.commentTemplate = fs.readFileSync(fullPathTemplate, 'utf8');
-      logger.info(`Loaded comment template from: ${botCommentTemplatePath}`);
-    } else {
-      logger.warn(`Comment template not found at ${botCommentTemplatePath}, using defaults`);
-    }
-  } catch (err) {
-    logger.error(`Failed to load comment template file`, err);
-  }
-
+  // Validate required fields
+  validateRequiredFields(config, requiredFields);
+  
   // Log the final configuration in DEBUG mode
   logger.debug('Final configuration:');
   logger.debug(JSON.stringify(config, null, 2));
-  
-  // Validate required fields
-  validateRequiredFields(config, requiredFields);
   
   return config;
 }

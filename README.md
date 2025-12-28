@@ -8,7 +8,7 @@ Centralized GitHub Actions for repository maintenance and automation across the 
 ```markdown
 workflow-configs/
 │
-├── add-update-label-weekly/            # "Add Update Label Weekly" workflow
+├── gha-add-update-label-weekly/            # "Add Update Label Weekly" workflow
 │   ├── dist/
 │   │   └── index.js
 │   ├── action.yml
