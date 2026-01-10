@@ -1,4 +1,4 @@
-name: Maintain Label Directory
+name: Update Label Directory
 
 on:
   label:
@@ -16,7 +16,7 @@ jobs:
   # If a label was edited, created, or deleted, update label directory
   Update-Label-Directory:
     runs-on: ubuntu-latest
-    if: github.repository == 'my-org/repo-name'
+    if: github.repository == 'my-org/repo-name' # ⓶
     steps:
       - name: Generate token from GitHub App
         id: generate-app-token
@@ -29,7 +29,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Run workflow
-        uses: my-org/central-repo/maintain-label-directory@v1
+        uses: my-org/central-repo/update-label-directory@v1
         with:
           github-token: ${{ steps.generate-app-token.outputs.token }}
           dry-run: ${{ github.event.inputs.dry-run || 'true' }}

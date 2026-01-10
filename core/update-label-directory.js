@@ -11,7 +11,7 @@ const NEW_LABEL_PREFIX = 'NEW-';
 
 
 /**
- * Function triggered by `maintain-label-directory.yml` that  
+ * Function triggered by `update-label-directory.yml` that 
  * updates the "Label Object" in `label-directory.json` 
  *
  * @param {Object} github     - GitHub object from actions/github-script
@@ -19,13 +19,13 @@ const NEW_LABEL_PREFIX = 'NEW-';
  * @param {Object} config     - configuration object
  * @returns {Object}
  */
-async function main({ github: g, context: c, config = cfg }) {
+async function main({ github: g, context: c, config: cfg }) {
 
   const github = g;
   const context = c;
   const config = cfg;
 
-  const FILEPATH = path.resolve(__dirname, '../utils/_data/label-directory.json');
+  const FILEPATH = path.resolve(__dirname, '../github-actions/workflow-configs/_data/label-directory.json');
 
   const labelId = context.payload.label.id;
   const labelName = context.payload.label.name;
@@ -33,8 +33,6 @@ async function main({ github: g, context: c, config = cfg }) {
   let labelKey = '';
   let actionAddOn = '';
   let message = '';
-  // let mutated = false;
-  // let reviewRequired = false;
 
   // If label 'edited' but changes do not include 'name', label directory is not updated and workflow exits
   if (labelAction === 'edited' && !context.payload.changes.name) {
@@ -47,9 +45,9 @@ async function main({ github: g, context: c, config = cfg }) {
     message = `Edit to description and/or color only, no updates to JSON or SoT`;
     logger.log(message);
     return {labelAction, labelKey, labelName, labelId, message};
-  } 
+  }
 
-  // Otherwise, retrieve label directory
+  // Otherwise, retrieve label directory 
   let data;
   try {
     const rawData = fs.readFileSync(FILEPATH, 'utf8');
@@ -68,7 +66,7 @@ async function main({ github: g, context: c, config = cfg }) {
   if (labelAction === 'deleted') {
     labelKey = cycleThroughDirectory(data, Number(labelId));
     if (labelKey) {
-      // If the 'labelKey' is found with 'labelId', replace with DELETED_LABEL_ID in JSON and flag for review
+      // If the 'labelKey' is found with 'labelId', replace with 'DELETED_LABEL_ID' in JSON and flag for review
       let prevId = labelId;
       labelId = DELETED_LABEL_ID;
       message = `Found labelKey:  ${labelKey}  for labelName:  ${labelName}  using labelId:  ${prevId}  --->  ${labelId}.  Id no longer valid. This needs review!`;
@@ -132,7 +130,7 @@ function cycleThroughDirectory(data, searchValue) {
   for (let [key, value] of Object.entries(data)) {
     if (Array.isArray(value) && value.includes(searchValue)) {
       return key;
-    } 
+    }
   }
   return undefined;
 }

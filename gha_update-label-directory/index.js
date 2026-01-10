@@ -3,22 +3,22 @@ const github = require('@actions/github');
 const { logger } = require('../shared/format-log-messages');
 const resolveConfigs = require('../shared/resolve-configs');
 const resolveLabels = require('../shared/resolve-labels');
-const maintainLabelDirectory = require('../core/maintain-label-directory');
+const updateLabelDirectory = require('../core/update-label-directory');
 const yaml = require('js-yaml'); 
 
 /**
- * Main entry point for the Maintain Label Directory action
+ * Main entry point for the Update Label Directory action
  * Orchestrates configuration loading, label resolution, and workflow execution
  */
 async function run() {
   try {
     logger.log(`=`.repeat(60));
-    logger.log(`Maintain Label Directory starting...`);
+    logger.log(`Update Label Directory starting...`);
     logger.log(`=`.repeat(60));
     
     // Get action inputs
     const token = core.getInput('github-token', { required: true });
-    const configPath = core.getInput('config-path') || 'github-actions/workflow-configs/maintain-label-directory-config.yml';
+    const configPath = core.getInput('config-path') || 'github-actions/workflow-configs/update-label-directory-config.yml';
     const dryRunInput = core.getInput('dry-run') || 'false';
     const dryRun = (dryRunInput).toLowerCase() === 'true';
     dryRun && logger.warn(`Running in DRY-RUN mode: No changes will be applied`);
@@ -85,9 +85,9 @@ async function run() {
     logger.log(``);
     
     // Execute the workflow
-    logger.step(`Running Maintain Label Directory workflow...`);
+    logger.step(`Running Update Label Directory workflow...`);
     
-    await maintainLabelDirectory({
+    await updateLabelDirectory({
       github: octokit,
       context,
       labels,
@@ -96,13 +96,13 @@ async function run() {
     
     logger.log(``);
     logger.log(`=`.repeat(60));
-    logger.log(`Maintain Label Directory - completed successfully`);
+    logger.log(`Update Label Directory - completed successfully`);
     logger.log(`=`.repeat(60));
     
   } catch (error) {
     logger.log(``);
     logger.log(`=`.repeat(60));
-    logger.log(`Maintain Label Directory - failed`);
+    logger.log(`Update Label Directory - failed`);
     logger.log(`=`.repeat(60));
     if (error.stack) {
       console.error(`Stack trace: ${error.stack}`);
