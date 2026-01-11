@@ -8,7 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
-_No unreleased changes yet._
+- feature: Added simplified, consolidated logging for each issue via `issueLogger()`
+- bug: Fixed major versioning
 
 ## v0.6.1
 2025-12-28

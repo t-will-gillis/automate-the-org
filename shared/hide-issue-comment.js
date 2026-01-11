@@ -25,6 +25,7 @@ async function minimizeIssueComment(github, nodeId) {
 
   try {
     await github.graphql(mutation, variables);
+    return true;
   } catch (error) {
     logger.error(`Error minimizing comment with nodeId ${nodeId}:`, error);
     throw new Error(error);
