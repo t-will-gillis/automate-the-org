@@ -157,6 +157,9 @@ function createIssueLogger(issueNum) {
     flush() {
       logger.log(issueLog.join('\n'));
       issueLog.length = 0;  // Clear the log after flushing
+      console.debug(`  (End of logs for Issue #${issueNum})`);
+      console.warn(`  (End of logs for Issue #${issueNum})`);
+      console.error(`  (End of logs for Issue #${issueNum})`);
     }
   };
 }
@@ -317,7 +320,8 @@ function formatComment(assignees, labelString, cutoffTime) {
   return completedInstructions;
 }
 
-async function postComment(issueNum, assignees, issueLog, labelString, cutoffTime) {
+// async function postComment(issueNum, assignees, issueLog, labelString, cutoffTime) {
+async function postComment(issueNum, assignees, labelString, cutoffTime) {
   try {
     const assigneeString = createAssigneeString(assignees);
     const instructions = formatComment(assigneeString, labelString, cutoffTime);
