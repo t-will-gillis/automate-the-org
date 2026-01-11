@@ -230,7 +230,7 @@ async function isTimelineOutdated(timeline, issueNum, assignees, issueLog) { // 
 
   // If 'lastActivityTimestamp' more recent than 'recentlyUpdatedCutoffTime', keep updated label and remove others
   if (isMomentRecent(lastActivityTimestamp, recentlyUpdatedCutoffTime)) {
-    issueLog.info(`  Decision:${lastActivityType} sooner than ${recentlyUpdatedByDays} days ago, retain '${labels.statusUpdated}' label if exists`);
+    issueLog.info(`  Decision: ${lastActivityType} sooner than ${recentlyUpdatedByDays} days ago, retain '${labels.statusUpdated}' label if exists`);
     return { result: false, labels: labels.statusUpdated, cutoff: recentlyUpdatedCutoffTime }
   }
 
