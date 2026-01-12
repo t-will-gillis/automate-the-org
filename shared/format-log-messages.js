@@ -20,38 +20,38 @@ const logger = {
   },
 
   // High-level step; start of a new logical phase
-  step: (msg) => console.log(`${colors.blue}[STEP]${colors.reset} ${msg}`),
+  step: (msg, indent=0) => console.log(`${' '.repeat(indent)}${colors.blue}[STEP]${colors.reset} ${msg}`),
 
   // Normal informational & general progress messages
-  info: (msg) => console.log(`${colors.cyan}[INFO]${colors.reset} ${msg}`),
+  info: (msg, indent=0) => console.log(`${' '.repeat(indent)}${colors.cyan}[INFO]${colors.reset} ${msg}`),
 
   // Success or completion message
-  success: (msg) => console.log(`${colors.green}[SUCCESS]${colors.reset} ${msg}`),
+  success: (msg, indent=0) => console.log(`${' '.repeat(indent)}${colors.green}[SUCCESS]${colors.reset} ${msg}`),
 
   // Non-fatal warning, annotated in GitHub Actions logs
-  warn: (msg) => {
-    console.warn(`${colors.yellow}[WARN]${colors.reset} ${msg}`);
+  warn: (msg, indent=0) => {
+    console.warn(`${' '.repeat(indent)}${colors.yellow}[WARN]${colors.reset} ${msg}`);
     console.log(`::warning::${msg}`);
   },
 
   // Errors: annotated in GitHub Actions logs
-  error: (msg, err = "") => {
+  error: (msg, err = "", indent=0) => {
     const details = err instanceof Error ? err.stack : err;
-    console.error(`${colors.red}[ERROR]${colors.reset} ${msg}${err ? `, ${err}` : ""}`);
+    console.error(`${' '.repeat(indent)}${colors.red}[ERROR]${colors.reset} ${msg}${err ? `, ${err}` : ""}`);
     console.log(`::error::${msg}${details ? `, ${details}` : ""}`);
   },
 
-  // Diagnostic detail; for dry-run/debug or verbose mode
-  debug: (msg) => {
+  // For dry-run/debug mode
+  debug: (msg, indent=0) => {
     if (dryRun) {
-      console.log(`${colors.magenta}[DEBUG]${colors.reset} ${msg}`);
+      console.log(`${' '.repeat(indent)}${colors.magenta}[DEBUG]${colors.reset} ${msg}`);
       // console.log(`${colors.gray}[DEBUG]${colors.reset} ${msg}`);
     }
   },
 
   // Standard log without flag
-  log: (msg) => {
-    console.log(msg);
+  log: (msg, indent=0) => {
+    console.log(`${' '.repeat(indent)}${msg}`);
   }
 
 };
