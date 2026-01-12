@@ -67,29 +67,32 @@ async function main({ github: g, context: c, labels: l, config: cfg }) {
 
   for (let issueNum of issueNums) {
 
-    // Use per-issue logging for clarity
-    const issueLog = createIssueLogger(issueNum);
-
+    // Logging per issue for clarity
+    logger.log(`Issue #${issueNum}:`);
+    
     const timeline = await getIssueTimeline(github, context, issueNum);
     const assignees = await getAssignees(issueNum);
 
-    // Add and remove labels as well as post comment if the issue's timeline indicates the issue is inactive, to be updated or up-to-date accordingly
-    const responseObject = await isTimelineOutdated(timeline, issueNum, assignees, issueLog);
+    // Add and remove labels as well as post comment if the issue's timeline indicates the issue is inactive, 
+    // needs to be updated, or is up-to-date accordingly
+    const responseObject = await isTimelineOutdated(timeline, issueNum, assignees);
 
     if (responseObject.result === true && responseObject.labels === labels.statusInactive1) {
-      await removeLabels(github, context, config, issueNum, issueLog, labels.statusUpdated, labels.statusInactive2);
-      await addLabels(github, context, config, issueNum, issueLog, responseObject.labels);
-      await postComment(issueNum, assignees, issueLog, labels.statusInactive1, responseObject.cutoff);
+      await removeLabels(github, context, config, issueNum, labels.statusUpdated, labels.statusInactive2);
+      await addLabels(github, context, config, issueNum, responseObject.labels);
+      await postComment(issueNum, assignees, labels.statusInactive1, responseObject.cutoff);
     } else if (responseObject.result === true && responseObject.labels === labels.statusInactive2) {
-      await removeLabels(github, context, config, issueNum, issueLog, labels.statusInactive1, labels.statusUpdated);
-      await addLabels(github, context, config, issueNum, issueLog, responseObject.labels);
-      await postComment(issueNum, assignees, issueLog, labels.statusInactive2, responseObject.cutoff);
+      await removeLabels(github, context, config, issueNum, labels.statusInactive1, labels.statusUpdated);
+      await addLabels(github, context, config, issueNum, responseObject.labels);
+      await postComment(issueNum, assignees, labels.statusInactive2, responseObject.cutoff);
     } else if (responseObject.result === false && responseObject.labels === labels.statusUpdated) {
-      await removeLabels(github, context, config, issueNum, issueLog, labels.statusInactive1, labels.statusInactive2);
+      await removeLabels(github, context, config, issueNum, labels.statusInactive1, labels.statusInactive2);
     } else if (responseObject.result === false && responseObject.labels === '') {
-      await removeLabels(github, context, config, issueNum, issueLog, labels.statusInactive1, labels.statusInactive2, labels.statusUpdated);
+      await removeLabels(github, context, config, issueNum, labels.statusInactive1, labels.statusInactive2, labels.statusUpdated);
     }
-    issueLog.flush();
+
+    // Minimize previous bot comments
+    await minimizeComments(responseObject.commentsToBeMinimized);
   }
 }
 
@@ -150,34 +153,13 @@ async function getIssueNumsFromRepo() {
 
 
 /**
- * Creates a logger that prefixes messages with the issue number
- * @param {Number} issueNum       - an issue's number
- * @returns {Object} issueLogger  - logger object with prefixed messages
- */
-function createIssueLogger(issueNum) {
-  const issueLog = [`Issue #${issueNum}`];
-  return {
-    info(msg) {
-      issueLog.push(`  ${msg}`);
-    },
-    flush() {
-      logger.log(issueLog.join('\n'));
-      issueLog.length = 0;  // Clear the log after flushing
-    }
-  };
-}
-
-
-
-/**
  * Assesses whether the timeline is outdated.
  * @param {Array} timeline      - a list of events in the timeline of an issue, retrieved from the issues API
  * @param {Number} issueNum     - the issue's number
  * @param {String} assignees    - a list of the issue's assignee's username
- * @param {Object} issueLog     - logger object for the specific issue
  * @returns true if timeline indicates the issue is outdated/inactive, false if not; also returns appropriate labels that should be retained or added to the issue
  */
-async function isTimelineOutdated(timeline, issueNum, assignees, issueLog) { // assignees is an arrays of `login`'s
+async function isTimelineOutdated(timeline, issueNum, assignees) { // assignees is an arrays of `login`'s
   let lastAssignedTimestamp = null;
   let lastCommentTimestamp = null;
   let commentsToBeMinimized = [];
@@ -194,11 +176,11 @@ async function isTimelineOutdated(timeline, issueNum, assignees, issueLog) { // 
       const isPR = eventObj.source?.issue?.pull_request;
    
       if (issueState === 'open' && isCommentByAssignees(eventObj, assignees)) {
-        issueLog.info(`  Open pull request linked to issue; remove all update-related labels`);
+        logger.log(`Open pull request linked to issue; remove all update-related labels`, 2);
         return { result: false, labels: '' };
       }
       if (issueState === 'closed' && isPR ) {
-        issueLog.info(`  Linked pull request closed; continue with checks`);
+        logger.log(`Linked pull request closed; continue with checks`, 2);
       }
     }
 
@@ -222,9 +204,6 @@ async function isTimelineOutdated(timeline, issueNum, assignees, issueLog) { // 
     }
   }
 
-  // Minimize previous bot comments
-  await minimizeComments(commentsToBeMinimized, issueLog);
-
   // Determine the latest activity timestamp and activity type
   let [ lastActivityTimestamp, lastActivityType ] =
     lastCommentTimestamp > lastAssignedTimestamp
@@ -232,29 +211,29 @@ async function isTimelineOutdated(timeline, issueNum, assignees, issueLog) { // 
     : [lastAssignedTimestamp, 'Assignee\'s assignment'];
 
   lastActivityTimestamp = setLocalTime(lastActivityTimestamp);
-  issueLog.info(`  ${lastActivityType} was at ${lastActivityTimestamp}`);
+  logger.log(`Decision: ${lastActivityType} was at ${lastActivityTimestamp}`, 2);
 
   // If 'lastActivityTimestamp' more recent than 'recentlyUpdatedCutoffTime', keep updated label and remove others
   if (isMomentRecent(lastActivityTimestamp, recentlyUpdatedCutoffTime)) {
-    issueLog.info(`  Decision:${lastActivityType} sooner than ${recentlyUpdatedByDays} days ago, retain '${labels.statusUpdated}' label if exists`);
-    return { result: false, labels: labels.statusUpdated, cutoff: recentlyUpdatedCutoffTime }
+    logger.log(`This is sooner than ${recentlyUpdatedByDays} days ago, retain '${labels.statusUpdated}' label if exists`, 4);
+    return { result: false, labels: labels.statusUpdated, cutoff: recentlyUpdatedCutoffTime, commentsToBeMinimized }
   }
 
   // If 'lastActivityTimestamp' more recent than 'needsUpdatingCutoffTime', remove all labels
   if (isMomentRecent(lastActivityTimestamp, needsUpdatingCutoffTime)) {
-    issueLog.info(`  Decision: ${lastActivityType} between ${recentlyUpdatedByDays} and ${needsUpdatingByDays} days ago, no update-related labels`)
-    return { result: false, labels: '', cutoff: needsUpdatingCutoffTime} 
+    logger.log(`This is between ${recentlyUpdatedByDays} and ${needsUpdatingByDays} days ago, no update-related labels`, 4);
+    return { result: false, labels: '', cutoff: needsUpdatingCutoffTime, commentsToBeMinimized } 
   }
 
   // If 'lastActivityTimestamp' not yet older than the 'isInactiveCutoffTime', issue needs update label
   if (isMomentRecent(lastActivityTimestamp, isInactiveCutoffTime)) { 
-    issueLog.info(`  Decision: ${lastActivityType} between ${needsUpdatingByDays} and ${isInactiveByDays} days ago, use '${labels.statusInactive1}' label`)
-    return { result: true, labels: labels.statusInactive1, cutoff: needsUpdatingCutoffTime }
+    logger.log(`This is between ${needsUpdatingByDays} and ${isInactiveByDays} days ago, use '${labels.statusInactive1}' label`, 4);
+    return { result: true, labels: labels.statusInactive1, cutoff: needsUpdatingCutoffTime, commentsToBeMinimized }
   }
 
   // If 'lastActivityTimestamp' is older than the 'isInactiveCutoffTime', issue is outdated and needs inactive label
-  issueLog.info(`  Decision: ${lastActivityType} older than ${isInactiveByDays} days ago, use '${labels.statusInactive2}' label`)
-  return { result: true, labels: labels.statusInactive2, cutoff: isInactiveCutoffTime }
+  logger.log(`This is older than ${isInactiveByDays} days ago, use '${labels.statusInactive2}' label`, 4);
+  return { result: true, labels: labels.statusInactive2, cutoff: isInactiveCutoffTime, commentsToBeMinimized }
 }
 
 
@@ -323,13 +302,14 @@ function formatComment(assignees, labelString, cutoffTime) {
   return completedInstructions;
 }
 
-async function postComment(issueNum, assignees, issueLog, labelString, cutoffTime) {
+// async function postComment(issueNum, assignees, labelString, cutoffTime) {
+async function postComment(issueNum, assignees, labelString, cutoffTime) {
   try {
     const assigneeString = createAssigneeString(assignees);
     const instructions = formatComment(assigneeString, labelString, cutoffTime);
 
     if (config.dryRun) {
-      issueLog.info(`  DEBUG: Would post comment to issue`);
+      logger.debug(`Would post comment to issue`, 2);
       return;
     }
     // https://docs.github.com/en/rest/issues/comments?apiVersion=2022-11-28#create-an-issue-comment
@@ -339,9 +319,9 @@ async function postComment(issueNum, assignees, issueLog, labelString, cutoffTim
       issue_number: issueNum,
       body: instructions,
     });
-    issueLog.info(`  Update request comment has been posted`);
+    logger.log(`Update request comment has been posted`, 2);
   } catch (err) {
-    issueLog.info(`  WARNING: Function failed to post comment ${err?.stack || err}`);
+    logger.warn(`Function failed to post comment ${err?.stack || err}`, 2);
   }
 }
 
@@ -364,7 +344,7 @@ function isCommentByBot(data) {
 async function minimizeComments(comment_node_ids) {
   for (const node_id of comment_node_ids) {
     if (config.dryRun) {
-      issueLog.info(`  DEBUG: Comment ${node_id} would be minimized`);
+      logger.debug(`Comment ${node_id} would be minimized`, 2);
       continue;
     }
     // Wait for 1000ms before doing the GraphQL mutation to avoid rate limiting
@@ -373,10 +353,10 @@ async function minimizeComments(comment_node_ids) {
     try {
       success = await minimizeIssueComment(github, node_id);
       if (success) {
-        issueLog.info(`  Comment ${node_id} has been minimized`);
+        logger.log(`Comment ${node_id} has been minimized`, 2);
       }
     } catch (error) {
-      issueLog.info(`  WARNING: Failed to minimize comment ${node_id}: ${error.message}`);
+      logger.warn(`Failed to minimize comment ${node_id}: ${error.message}`, 2);
       // Do not throw error
     }
     
@@ -34485,38 +34465,38 @@ const logger = {
   },
 
   // High-level step; start of a new logical phase
-  step: (msg) => console.log(`${colors.blue}[STEP]${colors.reset} ${msg}`),
+  step: (msg, indent=0) => console.log(`${' '.repeat(indent)}${colors.blue}[STEP]${colors.reset} ${msg}`),
 
   // Normal informational & general progress messages
-  info: (msg) => console.log(`${colors.cyan}[INFO]${colors.reset} ${msg}`),
+  info: (msg, indent=0) => console.log(`${' '.repeat(indent)}${colors.cyan}[INFO]${colors.reset} ${msg}`),
 
   // Success or completion message
-  success: (msg) => console.log(`${colors.green}[SUCCESS]${colors.reset} ${msg}`),
+  success: (msg, indent=0) => console.log(`${' '.repeat(indent)}${colors.green}[SUCCESS]${colors.reset} ${msg}`),
 
   // Non-fatal warning, annotated in GitHub Actions logs
-  warn: (msg) => {
-    console.warn(`${colors.yellow}[WARN]${colors.reset} ${msg}`);
+  warn: (msg, indent=0) => {
+    console.warn(`${' '.repeat(indent)}${colors.yellow}[WARN]${colors.reset} ${msg}`);
     console.log(`::warning::${msg}`);
   },
 
   // Errors: annotated in GitHub Actions logs
-  error: (msg, err = "") => {
+  error: (msg, err = "", indent=0) => {
     const details = err instanceof Error ? err.stack : err;
-    console.error(`${colors.red}[ERROR]${colors.reset} ${msg}${err ? `, ${err}` : ""}`);
+    console.error(`${' '.repeat(indent)}${colors.red}[ERROR]${colors.reset} ${msg}${err ? `, ${err}` : ""}`);
     console.log(`::error::${msg}${details ? `, ${details}` : ""}`);
   },
 
-  // Diagnostic detail; for dry-run/debug or verbose mode
-  debug: (msg) => {
+  // For dry-run/debug mode
+  debug: (msg, indent=0) => {
     if (dryRun) {
-      console.log(`${colors.magenta}[DEBUG]${colors.reset} ${msg}`);
+      console.log(`${' '.repeat(indent)}${colors.magenta}[DEBUG]${colors.reset} ${msg}`);
       // console.log(`${colors.gray}[DEBUG]${colors.reset} ${msg}`);
     }
   },
 
   // Standard log without flag
-  log: (msg) => {
-    console.log(msg);
+  log: (msg, indent=0) => {
+    console.log(`${' '.repeat(indent)}${msg}`);
   }
 
 };
@@ -34579,12 +34559,11 @@ const { logger } = __nccwpck_require__(2515);
  * @param {Object} context     -the GitHub Actions context object
  * @param {Object} config      -configuration object
  * @param {Number} issueNum    -an issue's number
- * @param {Object} issueLog    -logger object for the specific issue
  * @param {Array} labels       -an array containing the labels to add (captures the rest of the parameters)
  */
-async function addLabels(github, context, config, issueNum, issueLog, ...labelsToAdd) {
+async function addLabels(github, context, config, issueNum, ...labelsToAdd) {
   if (config.dryRun) {
-    issueLog.info(`  DEBUG: Would add '${labelsToAdd}'`);
+    logger.debug(`Would add '${labelsToAdd}'`, 2);
     return;
   }
   try {
@@ -34595,10 +34574,10 @@ async function addLabels(github, context, config, issueNum, issueLog, ...labelsT
       issue_number: issueNum,
       labels: labelsToAdd,
     });
-    issueLog.info(`  '${labelsToAdd}' label has been added`);
+    logger.log(`'${labelsToAdd}' label has been added`, 2);
     // If an error is found, the rest of the script does not stop.
   } catch (err) {
-    issueLog.info(`  WARNING: failed to add '${labelsToAdd}': ${err}`);
+    logger.warn(`Failed to add '${labelsToAdd}': ${err}`, 2);
   }
 }
 
@@ -34610,13 +34589,12 @@ async function addLabels(github, context, config, issueNum, issueLog, ...labelsT
  * @param {Object} context     -the GitHub Actions context object
  * @param {Object} config      -configuration object
  * @param {Number} issueNum    -an issue's number
- * @param {Object} issueLog    -logger object for the specific issue
  * @param {Array} labels       - an array containing the labels to remove (captures the rest of the parameters)
  */
-async function removeLabels(github, context, config, issueNum, issueLog, ...labelsToRemove) {
+async function removeLabels(github, context, config, issueNum, ...labelsToRemove) {
   for (let label of labelsToRemove) {
     if (config.dryRun) {
-      issueLog.info(`  DEBUG: Would remove '${label}'`);
+      logger.debug(`Would remove '${label}'`, 2);
       continue;
     }
     try {
@@ -34627,10 +34605,10 @@ async function removeLabels(github, context, config, issueNum, issueLog, ...labe
         issue_number: issueNum,
         name: label,
       });
-      issueLog.info(`  '${label}' label has been removed`);
+      logger.log(`'${label}' label has been removed`, 2);
     } catch (err) {
       if (err.status !== 404) {
-        issueLog.info(`  WARN: failed to remove '${label}': ${err}`);
+        logger.warn(`Failed to remove '${label}': ${err}`, 2);
       }
     }
   }
