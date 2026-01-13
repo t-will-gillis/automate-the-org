@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+_No unreleased changes yet._
+
+## v0.6.3
+2026-01-12
 - feature: Removed `issueLogger()`, now using logger file with indents
 - tweaking log files for readability
 
