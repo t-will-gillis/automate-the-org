@@ -148,9 +148,9 @@ async function getIssueNumsFromRepo() {
 
 /**
  * Assesses whether the timeline is outdated.
- * @param {Array} timeline      - a list of events in the timeline of an issue, retrieved from the issues API
+ * @param {Array} timeline      - list of events in the timeline of an issue, retrieved from issue's API
  * @param {Number} issueNum     - the issue's number
- * @param {String} assignees    - a list of the issue's assignee's username
+ * @param {String} assignees    - list of the issue assignee's username
  * @returns true if timeline indicates the issue is outdated/inactive, false if not; also returns appropriate labels that should be retained or added to the issue
  */
 async function isTimelineOutdated(timeline, issueNum, assignees) { // assignees is an arrays of `login`'s
@@ -205,28 +205,28 @@ async function isTimelineOutdated(timeline, issueNum, assignees) { // assignees 
     : [lastAssignedTimestamp, 'Assignee\'s assignment'];
 
   lastActivityTimestamp = setLocalTime(lastActivityTimestamp);
-  logger.log(`Decision: ${lastActivityType} was at ${lastActivityTimestamp}`, 2);
+  logger.log(`Update status: ${lastActivityType} was at ${lastActivityTimestamp}`, 2);
 
   // If 'lastActivityTimestamp' more recent than 'recentlyUpdatedCutoffTime', keep updated label and remove others
   if (isMomentRecent(lastActivityTimestamp, recentlyUpdatedCutoffTime)) {
-    logger.log(`This is sooner than ${recentlyUpdatedByDays} days ago, retain '${labels.statusUpdated}' label if exists`, 4);
+    logger.log(`Decision: This is sooner than ${recentlyUpdatedByDays} days ago, retain '${labels.statusUpdated}' label if exists`, 4);
     return { result: false, labels: labels.statusUpdated, cutoff: recentlyUpdatedCutoffTime, commentsToBeMinimized }
   }
 
   // If 'lastActivityTimestamp' more recent than 'needsUpdatingCutoffTime', remove all labels
   if (isMomentRecent(lastActivityTimestamp, needsUpdatingCutoffTime)) {
-    logger.log(`This is between ${recentlyUpdatedByDays} and ${needsUpdatingByDays} days ago, no update-related labels`, 4);
+    logger.log(`Decision: This is between ${recentlyUpdatedByDays} and ${needsUpdatingByDays} days ago, no update-related labels`, 4);
     return { result: false, labels: '', cutoff: needsUpdatingCutoffTime, commentsToBeMinimized } 
   }
 
   // If 'lastActivityTimestamp' not yet older than the 'isInactiveCutoffTime', issue needs update label
   if (isMomentRecent(lastActivityTimestamp, isInactiveCutoffTime)) { 
-    logger.log(`This is between ${needsUpdatingByDays} and ${isInactiveByDays} days ago, use '${labels.statusInactive1}' label`, 4);
+    logger.log(`Decision: This is between ${needsUpdatingByDays} and ${isInactiveByDays} days ago, use '${labels.statusInactive1}' label`, 4);
     return { result: true, labels: labels.statusInactive1, cutoff: needsUpdatingCutoffTime, commentsToBeMinimized }
   }
 
   // If 'lastActivityTimestamp' is older than the 'isInactiveCutoffTime', issue is outdated and needs inactive label
-  logger.log(`This is older than ${isInactiveByDays} days ago, use '${labels.statusInactive2}' label`, 4);
+  logger.log(`Decision: This is older than ${isInactiveByDays} days ago, use '${labels.statusInactive2}' label`, 4);
   return { result: true, labels: labels.statusInactive2, cutoff: isInactiveCutoffTime, commentsToBeMinimized }
 }
 
@@ -341,13 +341,15 @@ async function minimizeComments(comment_node_ids) {
       logger.debug(`Comment ${node_id} would be minimized`, 2);
       continue;
     }
+
     // Wait for 1000ms before doing the GraphQL mutation to avoid rate limiting
     await new Promise((resolve) => { setTimeout(resolve, 1000); });
 
     try {
       success = await minimizeIssueComment(github, node_id);
       if (success) {
-        logger.log(`Comment ${node_id} has been minimized`, 2);
+      // Uncomment to log the id of each comment being minimized
+      //   logger.log(`Comment ${node_id} has been minimized`, 2);
       }
     } catch (error) {
       logger.warn(`Failed to minimize comment ${node_id}: ${error.message}`, 2);

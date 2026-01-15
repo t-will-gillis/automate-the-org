@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
-_No unreleased changes yet._
+- feature: add better error handling and logging to the rollout workflow YMLs
+- docs: update README.md to explain how to install
+- docs: minor clarifications throughout
 
 ## v0.6.3
 2026-01-12

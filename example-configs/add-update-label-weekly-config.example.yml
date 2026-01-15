@@ -19,7 +19,7 @@
 # ==============================================================================
 timeframes:
   # Customize the number of days as needed for your project 
-  # Note: the next 3 values must be sorted min to max, recentlyUpdated < needsUpdating < isInactive
+  # Note: the next 3 values must be sorted min to max: recentlyUpdated < needsUpdating < isInactive
   recentlyUpdatedByDays: 3    # Issues updated within this many days are considered current
   needsUpdatingByDays: 7      # Issues not updated for this many days are prompted for update
   isInactiveByDays: 14        # Issues not updated for this many days are marked as inactive
@@ -50,29 +50,27 @@ projectBoard:
 
 
 # ==============================================================================
-# Label Directory Filepath- Do not change
+# Label directory filepath- Do not change
 # ==============================================================================
-
-# The automation reviews which labels have been applied to the included issues, to:
-#   1. Flag issues that need updates from the assignee, and
-#   2. Ignore issues that do not need to be checked.
 #
-# The workflow relies on the label "keys" to identify the purpose of each label 
-# which correspond to the actual label name "values" used by your repo.
+#  NOTE: Label key to label name values are defined in your project's
+#  `label-directory.json` file. The path to the label directory is:
 #
-#   NOTE: Since different workflows use many of the same label names, label name 
-#   values are mapped in your project's label directory json file- not here.
-#   The path to your label directory is here (do not change):
 
-labelDirectoryPath: "github-actions/workflow-configs/_data/label-directory.json" 
+# labelDirectoryPath: "github-actions/workflow-configs/_data/label-directory.json" 
 
 
 
 # ==============================================================================
 # Label keys used by this workflow
 # ==============================================================================
-
-# The label "keys" shown here are used internally by the workflow.
+#
+# The automation reviews which labels have been applied to each issue to:
+#   1. Flag issues that need updates from the assignee, and
+#   2. Ignore issues that do not need to be checked.
+#
+# The label keys values shown here are used internally by the workflow and are 
+# mapped to an actual label name in your project's `label-directory.json` file.
 
 labels:
   required:
@@ -88,9 +86,10 @@ labels:
     - statusHelpWanted             # Map in the `label-directory.json` file
 
   ignored:
-    # Issues with these labels are ignored by the automation.
-      # EXCEPTION: you may add or remove label "keys" from this list as desired- but
-      # ensure the added "key" maps to a "value" in your label-directory.json file.
+    # Ignored label keys: optionally add or remove as needed. 
+      # Issues with these labels are ignored by the automation.
+      # You can add or remove any of the ignored label "keys" from this list, but
+      # ensure any added "key" maps to a name in your `label-directory.json` file.
     - draft                        # Map in the `label-directory.json` file
     - er                           # Map in the `label-directory.json` file
     - epic                         # Map in the `label-directory.json` file
@@ -104,7 +103,7 @@ labels:
 # ==============================================================================
 # Relevant to "timeframes.upperLimitDays" setting above: Bot usernames whose 
 # comments should be minimized when they become outdated. Comments are minimized 
-# if they're between 'needsUpdatingByDays' and 'upperLimitDays' old
+# if they're between 'needsUpdatingByDays' and 'upperLimitDays' old.
 bots:
   - "github-actions[bot]"
   - "HackforLABot"
@@ -128,7 +127,7 @@ teamSlackChannel: ""  # Only if needed, for example "#project-site"
 
 # Do not change the path to the bot comment template file below.
 # If needed, edit the file using markdown syntax at the given path.
-botCommentTemplatePath: "github-actions/workflow-configs/templates/add-update-instructions-template.md"
+# botCommentTemplatePath: "github-actions/workflow-configs/templates/add-update-instructions-template.md"
 
 
 
