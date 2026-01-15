@@ -209,24 +209,24 @@ async function isTimelineOutdated(timeline, issueNum, assignees) { // assignees 
 
   // If 'lastActivityTimestamp' more recent than 'recentlyUpdatedCutoffTime', keep updated label and remove others
   if (isMomentRecent(lastActivityTimestamp, recentlyUpdatedCutoffTime)) {
-    logger.log(`Decision: This is sooner than ${recentlyUpdatedByDays} days ago, retain '${labels.statusUpdated}' label if exists`, 4);
+    logger.log(`Decision: This is sooner than ${recentlyUpdatedByDays} days ago, retain '${labels.statusUpdated}' label if exists`, 2);
     return { result: false, labels: labels.statusUpdated, cutoff: recentlyUpdatedCutoffTime, commentsToBeMinimized }
   }
 
   // If 'lastActivityTimestamp' more recent than 'needsUpdatingCutoffTime', remove all labels
   if (isMomentRecent(lastActivityTimestamp, needsUpdatingCutoffTime)) {
-    logger.log(`Decision: This is between ${recentlyUpdatedByDays} and ${needsUpdatingByDays} days ago, no update-related labels`, 4);
+    logger.log(`Decision: This is between ${recentlyUpdatedByDays} and ${needsUpdatingByDays} days ago, no update-related labels`, 2);
     return { result: false, labels: '', cutoff: needsUpdatingCutoffTime, commentsToBeMinimized } 
   }
 
   // If 'lastActivityTimestamp' not yet older than the 'isInactiveCutoffTime', issue needs update label
   if (isMomentRecent(lastActivityTimestamp, isInactiveCutoffTime)) { 
-    logger.log(`Decision: This is between ${needsUpdatingByDays} and ${isInactiveByDays} days ago, use '${labels.statusInactive1}' label`, 4);
+    logger.log(`Decision: This is between ${needsUpdatingByDays} and ${isInactiveByDays} days ago, use '${labels.statusInactive1}' label`, 2);
     return { result: true, labels: labels.statusInactive1, cutoff: needsUpdatingCutoffTime, commentsToBeMinimized }
   }
 
   // If 'lastActivityTimestamp' is older than the 'isInactiveCutoffTime', issue is outdated and needs inactive label
-  logger.log(`Decision: This is older than ${isInactiveByDays} days ago, use '${labels.statusInactive2}' label`, 4);
+  logger.log(`Decision: This is older than ${isInactiveByDays} days ago, use '${labels.statusInactive2}' label`, 2);
   return { result: true, labels: labels.statusInactive2, cutoff: isInactiveCutoffTime, commentsToBeMinimized }
 }
 
