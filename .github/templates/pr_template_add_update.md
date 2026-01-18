@@ -31,9 +31,9 @@ This PR adds the "Add Update Label Weekly" GitHub Actions workflow to your proje
   - `github-actions/workflow-configs/templates/add-update-instructions-template.md`
 
 ### File to be installed unless already present
-The following file is shared among the centralized GitHub Actions, and only needs to be<br>
-installed once. If this file does not exist in the repo, it will be generated and included with<br>
-the PR. It will be skipped if this file was installed previously. 
+The following file is shared among the centralized GitHub Actions, and only needs to be  
+installed once. If this file does not exist in the repo, it will be generated and included with  
+the PR. It will be skipped if this file was installed previously.  
 - **Additional config file** _(unless installed previously)_:
   - `github-actions/workflow-configs/_data/label-directory.json`
 
