@@ -1,16 +1,60 @@
 # Automate the ORG 
-## Maintenance Actions Monorepo
+## Shared GitHub Actions
 
 Centralized GitHub Actions for repository maintenance and automation across the organization.
+
+## How to Use
+### Installing an Action to a Project
+To install a centralized GitHub Actions (GHA) to a project repo, follow these steps:  
+
+- Configure both of the organizational GitHub Apps:  
+  - [hfla-workflow-rollout](https://github.com/organizations/hackforla/settings/installations/92646041) gives "Automate the ORG" (source) access to the project (destination) repo during installation.  
+  - [hfla-graphql-app](https://github.com/organizations/hackforla/settings/installations/92507394) gives the project (destination) repo access to scripts in "Automate the ORG" (source) during the workflow's runtime.  
+  - For both, first scroll to "Repository access", then "Only select repositories", then select the corresponding project repo in the "Select repositories" dropdown.  
+  - Click "Save".
+- Run the **"Rollout Project Label Directory"** workflow from "Automate the ORG". 
+  <details>  
+  &emsp;  
+
+  This workflow generates the `label-directory.json` for the PR to install on the destination repo, unless the file already exists.  
+
+  1. From the "Automate the ORG" repo, select "Actions", then select "Rollout Project Label Directory" on the left.  
+  2. On the right, click on "Run workflow" to bring up installation options.  
+  3. Confirm that the `master` branch is selected.  
+  4. Enter the `<project-repo>` for the "Destination repo".  
+  5. Do not change the "Source repo"  
+  6. Do not change the "GitHub App" name.  
+  7. Keep box checked for "Dry run mode".  
+  8. Click "Run workflow". If there are no errors, a project-specific `label-directory.json` file will be generated. If the file already exists on either the destination or source repo, the workflow will exit- see the workflow logs for more information.
+  </details>
+  &emsp;  
+- Run the **"Rollout Workflow to Project"** workflow from "Automate the ORG". 
+  <details>  
+  &emsp;  
+
+  This workflow generates the `label-directory.json` for the PR to install on the destination repo, unless the file already exists.  
+
+  1. From the "Automate the ORG" repo, select "Actions", then select "Rollout Workflow to Project" on the left.  
+  2. On the right, click on "Run workflow" to bring up installation options.  
+  3. Confirm that the `master` branch is selected.  
+  4. Enter the `<project-repo>` for the "Destination repo".  
+  5. Do not change the "Source repo".
+  6. Select which GitHub Action you would like installed
+  7. Do not change the "Branch name" or "GitHub App" name. 
+  8. Keep box checked for "Dry run mode". 
+  9. Click "Run workflow". If successful, the "DRY-RUN" output will be found in "Rollout to destination repo".
+  </details>  
+  &emsp;  
+
 
 ## Repository Structure
 
 ```markdown
 workflow-configs/
 │
-├── gha-add-update-label-weekly/            # "Add Update Label Weekly" workflow
-│   ├── dist/
-│   │   └── index.js
+├── gha-add-update-label-weekly/        # "Add Update Label Weekly" workflow
+│   ├── dist/ 
+│   │   └── index.js                    # Vercel's generated build artifact / production entry point 
 │   ├── action.yml
 │   └── index.js
 │
@@ -18,14 +62,13 @@ workflow-configs/
 │   └── add-update-label-weekly.js      # "Add Update Label Weekly" files
 │
 ├── shared/                             # Shared utilities across all actions
-│   ├── find-linked-issue.js
-│   ├── format-log-messages.js          # `logger` utility to sort log
-│   ├── get-issue-labels.js
+│   ├── find-linked-issue.js            # 
+│   ├── format-log-messages.js          # `logger` utility to sort log messages
 │   ├── hide-issue-comment.js           # Minimizes comments 
 │   ├── manage-issue-labels.js          # Set of issue-labelling utilities 
 │   ├── manage-issue-timeline.js        # Set of issue-timeline utilities
-│   ├── post-issue-comment.js
-│   ├── query-issue-info.js
+│   ├── post-issue-comment.js           # 
+│   ├── query-issue-info.js             # 
 │   ├── resolve-configs.js              # Resolve config files
 │   └── resolve-labels.js               # Resolve label files
 │
@@ -34,9 +77,12 @@ workflow-configs/
 │   ├── add-update-label-weekly.example.yml
 │   └── label-directory.example.yml     # Example only- not used
 │
-├── package.json                        # Dependencies for all actions
-├── 
-├── CHANGELOG.md                        # Versioning log
+├── .gitignore 
+├── auto-release.sh                     # Script for updating version on a branch
+├── auto-update-master.sh               # Script for updating version on the master
+├── package.json 
+├── package-lock.json 
+├── CHANGELOG.md                        # Change log for tracking changes per version
 └── README.md                           # This file
 ```
 

@@ -10,6 +10,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 _No unreleased changes yet._
 
+## v0.6.5
+2026-01-18
+- style: minor edits to log format and text on PR template
+
+## v0.6.4
+2026-01-15
+- feature: add better error handling and logging to the rollout workflow YMLs
+- docs: update README.md to explain how to install
+- docs: minor clarifications throughout
+
+## v0.6.3
+2026-01-12
+- feature: Removed `issueLogger()`, now using logger file with indents
+- tweaking log files for readability
+
+## v0.6.2
+2026-01-10
+- feature: Added simplified, consolidated logging for each issue via `issueLogger()`
+- bug: Fixed major versioning
+
 ## v0.6.1
 2025-12-28
 - refactor: renaming main folder --> `gha-add-update-label-weekly` to accommodate fut. ghas

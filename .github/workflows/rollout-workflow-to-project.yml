@@ -4,21 +4,25 @@ on:
   workflow_dispatch:
     inputs:
       target_repo:
-        description: 'Target repo, e.g. "org/project":'
+        description: 'Destination repo, e.g. "org/project":'
         required: true
-        default: 'hackforla/'
+        default: 'hackforla/<project-repo>'
       source_repo:
         description: 'Source repo, e.g. "org/central-repo":'
         required: true
         default: 'hackforla/automate-the-org'
+      template_file:
+        description: 'GitHub Action to Install:'
+        required: true
+        type: choice
+        default: 'Add Update Label Weekly'
+        options:
+          - 'Add Update Label Weekly'
+          - 'more coming soon...'
       rollout_branch:
         description: 'Branch name for rollout PR:'
         required: false
         default: 'automation/rollout-central-workflow'
-      template_file:
-        description: 'Template file (must exist in .github/templates/):'
-        required: true
-        default: 'pr_template_add_update.md'
       github_app_name:
         description: 'GitHub App name/slug:'
         required: true
@@ -55,7 +59,7 @@ jobs:
 
           # Ensure key is written correctly
           if [[ ! -s key.pem ]]; then
-            echo "Error: private key is empty or missing"
+            echo "::error title=Private key error::Private key is empty or missing"
             exit 1
           fi
           
@@ -89,8 +93,11 @@ jobs:
             | jq -r '.id')
           
           if [[ -z "$INSTALLATION_ID" || "$INSTALLATION_ID" == "null" ]]; then
-            echo "Error: Could not get installation ID"
-            echo "Make sure the GitHub App is installed on the organization"
+            echo "::error title=Installation ID error::Could not get installation ID"
+
+            echo "::group::Troubleshooting"
+            echo "Ensure the GitHub App is installed on the organization"
+            echo "::endgroup::"
             exit 1
           fi
           
@@ -105,8 +112,11 @@ jobs:
           APP_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.token')
           
           if [[ -z "$APP_TOKEN" || "$APP_TOKEN" == "null" ]]; then
-            echo "Error: Could not generate access token"
-            echo "Response: $TOKEN_RESPONSE"
+            echo "::error title=Access token error::Could not generate access token"
+
+            echo "::group::Token generation response"
+            echo "$TOKEN_RESPONSE"
+            echo "::endgroup::"
             exit 1
           fi
           
@@ -120,10 +130,19 @@ jobs:
 
       - name: Prepare variables
         run: |
+          # Select correct template file based on input
+          case "${{ github.event.inputs.template_file }}" in
+            "Add Update Label Weekly")
+              TEMPLATE_FILE="pr_template_add_update.md"
+              ;;
+            *)
+              echo "::error title=Unknown template file option::Unknown template file option '${{ github.event.inputs.template_file }}'"
+              exit 1
+              ;;
+          esac
           TARGET_REPO="${{ github.event.inputs.target_repo }}"
           SOURCE_REPO="${{ github.event.inputs.source_repo }}"
           ROLLOUT_BRANCH="${{ github.event.inputs.rollout_branch }}"
-          TEMPLATE_FILE="${{ github.event.inputs.template_file }}"
           DRY_RUN="${{ github.event.inputs.dry_run }}"
           PROJECT_NAME=$(echo "${TARGET_REPO}" | cut -d'/' -f2)
           ORG_NAME=$(echo "$SOURCE_REPO" | cut -d'/' -f1)
@@ -136,7 +155,7 @@ jobs:
           echo "PROJECT_NAME=${PROJECT_NAME}" >> $GITHUB_ENV
           echo "ORG_NAME=${ORG_NAME}" >> $GITHUB_ENV
 
-      - name: Check whether label-directory.json exists in target repo
+      - name: Check whether label-directory.json exists in destination repo
         id: check-target-label-dir
         run: |
           DEST_FILEPATH="github-actions/workflow-configs/_data/label-directory.json"
@@ -154,7 +173,7 @@ jobs:
         id: check-source-label-dir
         run: |
           if [[ "$TARGET_EXISTS" == "true" ]]; then
-            echo "Skip source check because target exists."
+            echo "Skip source check because file exists at destination."
             exit 0
           fi
 
@@ -166,8 +185,13 @@ jobs:
             echo "Label directory file exists in source repo. Proceeding..."
           else
             echo "SOURCE_EXISTS=false" >> $GITHUB_ENV
-            echo "Label directory file does not exist in source repo."
-            echo " ⮡  Run Rollout Project Label Directory first. Exiting..."
+            echo "::error title=Source label directory missing::Label directory file does not exist in source repository"
+
+            echo "::group::Next steps"
+            echo "Run the 'Rollout Project Label Directory' workflow first."
+            echo "Expected directory: $LABEL_DIR"
+            echo "::endgroup::"
+
             exit 1
           fi
 
@@ -188,7 +212,7 @@ jobs:
           TEMPLATE_PATH="central/.github/templates/$TEMPLATE_FILE"
 
           if [[ ! -f "$TEMPLATE_PATH" ]]; then
-            echo "Error: Template file not found at $TEMPLATE_PATH"
+            echo "::error title=Template file not found::Template file not found at $TEMPLATE_PATH"
             exit 1
           fi
 
@@ -197,7 +221,7 @@ jobs:
 
           # Verify extraction worked
           if [[ ! -s rollout-config.yaml ]]; then
-            echo "Error: Failed to extract YAML or file is empty"
+            echo "::error title=Failed to extract YAML::Failed to extract YAML or file is empty"
             exit 1
           fi
 
@@ -210,7 +234,7 @@ jobs:
           
           # Validate extraction
           if [[ "$WORKFLOW_SRC_RAW" == "null" ]] || [[ -z "$WORKFLOW_SRC_RAW" ]]; then
-            echo "Error: Failed to extract workflow_file.src from rollout-config.yaml"
+            echo "::error title=Failed to extract workflow file::Failed to extract `workflow_file.src` from rollout-config.yaml"
             exit 1
           fi
           
@@ -246,7 +270,7 @@ jobs:
 
       - name: Append source file if needed
         run: |
-          # Only append if target file does NOT exist but source file DOES exist
+          # Only append if destination file does NOT exist but source file DOES exist
           if [[ "$TARGET_EXISTS" == "false" && "$SOURCE_EXISTS" == "true" ]]; then
             echo "Appending label-directory.json to config_files.json"
 
@@ -261,22 +285,27 @@ jobs:
         run: |
           # Verify workflow source file exists
           if [[ ! -f "$WORKFLOW_SRC" ]]; then
-            echo "Error: Workflow source file not found at $WORKFLOW_SRC"
+            echo "::error title=Workflow source file not found::Workflow source file does not exist"
+
+            echo "::group::Details"
             echo "Expected path: $WORKFLOW_SRC"
+            echo "Verify the file exists in the source repository."
+            echo "::endgroup::"
+
             exit 1
           fi
           
           WORKFLOW_NAME=$(grep -E '^name:' "$WORKFLOW_SRC" | sed 's/^name:[[:space:]]*//')
           
           if [[ -z "$WORKFLOW_NAME" ]]; then
-            echo "Error: Could not extract workflow name from $WORKFLOW_SRC"
+            echo "::error title=Could not extract workflow name::Could not extract workflow name from $WORKFLOW_SRC"
             exit 1
           fi
           
           echo "WORKFLOW_NAME=$WORKFLOW_NAME" >> $GITHUB_ENV
           echo "Workflow name: $WORKFLOW_NAME"
 
-      - name: Rollout to target repo
+      - name: Rollout to destination repo
         env:
           APP_TOKEN: ${{ steps.generate-app-token.outputs.token }} 
         run: |
@@ -320,12 +349,12 @@ jobs:
             exit 0
           fi
 
-          # Clone the target repository
+          # Clone the destination repository
           echo "Cloning repository: $REPO (branch: $DEFAULT_BRANCH)"
           
           if ! git clone --depth 1 --branch "$DEFAULT_BRANCH" \
             "https://x-access-token:${APP_TOKEN}@github.com/${REPO}" temp-repo; then
-            echo "Error: Failed to clone repository $REPO"
+            echo "::error title=Failed to clone repository::Failed to clone repository $REPO"
             exit 1
           fi
           

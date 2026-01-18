@@ -5,9 +5,9 @@ on:
   workflow_dispatch:
     inputs:
       target_repo:
-        description: 'Target repo, e.g. "org/project":'
+        description: 'Destination repo, e.g. "org/project":'
         required: true
-        default: 'hackforla/'
+        default: 'hackforla/<project-repo>'
       source_repo:
         description: 'Source repo, e.g. "org/central-repo":'
         required: true
@@ -33,7 +33,13 @@ jobs:
       - name: Validate target_repo format
         run: |
           if [[ "${{ github.event.inputs.target_repo }}" != */* ]]; then
-            echo "Target repo must be in the format 'org/repo-name'. Exiting."
+            echo "::error title=Invalid destination repo format::Destination repo must be in the format 'org/repo-name'"
+
+            echo "::group::Troubleshooting"
+            echo "Provided value: $TARGET_REPO"
+            echo "The 'Destination repo' must be in the format 'org/repo-name'."
+            echo "::endgroup::"
+
             exit 1
           fi
 
@@ -55,7 +61,7 @@ jobs:
 
           # Ensure key is written correctly
           if [[ ! -s key.pem ]]; then
-            echo "Error: private key is empty or missing"
+            echo "::error title=Private key error::Private key is empty or missing"
             exit 1
           fi
           
@@ -89,8 +95,11 @@ jobs:
             | jq -r '.id')
           
           if [[ -z "$INSTALLATION_ID" || "$INSTALLATION_ID" == "null" ]]; then
-            echo "Error: Could not get installation ID"
-            echo "Make sure the GitHub App is installed on the organization"
+            echo "::error title=Installation ID error::Could not get installation ID"
+
+            echo "::group::Troubleshooting"
+            echo "Ensure the GitHub App is installed on the organization"
+            echo "::endgroup::"
             exit 1
           fi
           
@@ -105,8 +114,11 @@ jobs:
           APP_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.token')
           
           if [[ -z "$APP_TOKEN" || "$APP_TOKEN" == "null" ]]; then
-            echo "Error: Could not generate access token"
-            echo "Response: $TOKEN_RESPONSE"
+            echo "::error title=Access token error::Could not generate access token"
+
+            echo "::group::Token generation response"
+            echo "$TOKEN_RESPONSE"
+            echo "::endgroup::"
             exit 1
           fi
           
@@ -143,7 +155,7 @@ jobs:
         id: check-target-label-dir
         run: |
           if [ -f "target/github-actions/workflow-configs/_data/label-directory.json" ]; then
-            echo "Label directory file exists in target repo. Do not proceed."
+            echo "::error title=`label-directory.json` already exists in $TARGET_REPO.::Label directory file was previously installed in destination repo."
             exit 1
           else
             echo "Label directory file does not exist in target repo. Proceeding..."
@@ -156,7 +168,7 @@ jobs:
           FILEPATH="central/example-configs/$FILENAME"
 
           if [ -f "$FILEPATH" ]; then
-            echo "Label directory file exists in source repo. Do not proceed."
+            echo "::error title=`label-directory.json` already exists in $SOURCE_REPO.::Label directory file was previously generated and will not be re-generated."
             exit 1
           else
             echo "Label directory file does not exist in source repo. Proceeding..."
