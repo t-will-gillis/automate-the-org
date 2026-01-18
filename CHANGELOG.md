@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+_No unreleased changes yet._
+
+## v0.6.5
+2026-01-18
 - style: minor edits to log format and text on PR template
 
 ## v0.6.4
