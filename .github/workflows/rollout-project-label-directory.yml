@@ -7,7 +7,7 @@ on:
       target_repo:
         description: 'Destination repo, e.g. "org/project":'
         required: true
-        default: 'hackforla/<project-repo>'
+        default: 'hackforla/'
       source_repo:
         description: 'Source repo, e.g. "org/central-repo":'
         required: true
@@ -34,12 +34,6 @@ jobs:
         run: |
           if [[ "${{ github.event.inputs.target_repo }}" != */* ]]; then
             echo "::error title=Invalid destination repo format::Destination repo must be in the format 'org/repo-name'"
-
-            echo "::group::Troubleshooting"
-            echo "Provided value: $TARGET_REPO"
-            echo "The 'Destination repo' must be in the format 'org/repo-name'."
-            echo "::endgroup::"
-
             exit 1
           fi
 
@@ -55,6 +49,9 @@ jobs:
           # Prevent partial command failures
           set -o pipefail
           
+          # Ensure key cleanup even if the script exits early
+          trap 'rm -f key.pem' EXIT
+
           # Generate JWT for GitHub App authentication
           printf "%s" "${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}" > key.pem
           chmod 600 key.pem
@@ -95,11 +92,7 @@ jobs:
             | jq -r '.id')
           
           if [[ -z "$INSTALLATION_ID" || "$INSTALLATION_ID" == "null" ]]; then
-            echo "::error title=Installation ID error::Could not get installation ID"
-
-            echo "::group::Troubleshooting"
-            echo "Ensure the GitHub App is installed on the organization"
-            echo "::endgroup::"
+            echo "::error title=GitHub App installation ID error::Could not retrieve GitHub App installation ID"
             exit 1
           fi
           
@@ -114,11 +107,10 @@ jobs:
           APP_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.token')
           
           if [[ -z "$APP_TOKEN" || "$APP_TOKEN" == "null" ]]; then
-            echo "::error title=Access token error::Could not generate access token"
-
-            echo "::group::Token generation response"
+            echo "::error title=JSON web token (JWT) error::Could not generate JSON web token (JWT)"
+            echo "Token generation response: "
             echo "$TOKEN_RESPONSE"
-            echo "::endgroup::"
+            
             exit 1
           fi
           
@@ -126,11 +118,9 @@ jobs:
           echo "::add-mask::$APP_TOKEN"
           echo "token=$APP_TOKEN" >> $GITHUB_OUTPUT
 
-          # Output token
-          rm key.pem
           echo "GitHub App installation token generated successfully"
 
-      - name: Checkout target repo
+      - name: Checkout destination repo
         uses: actions/checkout@v6
         with:
           repository: ${{ github.event.inputs.target_repo }}
@@ -151,39 +141,39 @@ jobs:
           echo "PROJECT_NAME=${PROJECT_NAME}" >> $GITHUB_ENV
           echo "ORG_NAME=${ORG_NAME}" >> $GITHUB_ENV
 
-      - name: Check whether label-directory.json exists in target repo
+      - name: Check if label-directory.json exists in destination repo
         id: check-target-label-dir
         run: |
           if [ -f "target/github-actions/workflow-configs/_data/label-directory.json" ]; then
-            echo "::error title=`label-directory.json` already exists in $TARGET_REPO.::Label directory file was previously installed in destination repo."
+            echo "::error title=Label directory file already exists in '$TARGET_REPO'.::Label directory file already exists in '$TARGET_REPO'; exiting..."
             exit 1
           else
-            echo "Label directory file does not exist in target repo. Proceeding..."
+            echo "Label directory file does not exist in '$TARGET_REPO'; proceeding..."
           fi
           
-      - name: Check whether label-directory.json exists in source repo
+      - name: Check if label-directory.json exists in source repo
         id: check-source-label-dir
         run: |
           FILENAME="label-directory.${PROJECT_NAME}.json"
           FILEPATH="central/example-configs/$FILENAME"
 
           if [ -f "$FILEPATH" ]; then
-            echo "::error title=`label-directory.json` already exists in $SOURCE_REPO.::Label directory file was previously generated and will not be re-generated."
+            echo "::error title=Label directory file already exists in '$SOURCE_REPO'.::Label directory file was previously generated in '$SOURCE_REPO' and will not be re-generated; exiting..."
             exit 1
           else
-            echo "Label directory file does not exist in source repo. Proceeding..."
+            echo "Label directory file does not exist in '$SOURCE_REPO'; proceeding..."
           fi
 
           # persist for downstream steps
           echo "FILENAME=$FILENAME" >> $GITHUB_ENV
           echo "FILEPATH=$FILEPATH" >> $GITHUB_ENV
 
-      - name: Retrieve all labels from target repo
+      - name: Retrieve all labels from destination repo
         id: retrieve-labels
         env:
           GITHUB_TOKEN: ${{ steps.generate-app-token.outputs.token }}
         run: |
-          echo "Retrieving labels for $TARGET_REPO"
+          echo "Retrieving labels from '$TARGET_REPO'..."
 
           # Fetch all labels into one JSON array
           gh api --paginate "repos/$TARGET_REPO/labels?per_page=100" \
@@ -202,7 +192,7 @@ jobs:
         env:
           LABELS_JSON: ${{ env.LABELS_JSON }}
         run: |
-          echo "Generating label-directory.{PROJECT_NAME}.json in source repo..."
+          echo "Generating 'label-directory.$PROJECT_NAME.json' for '$SOURCE_REPO'..."
 
           mkdir -p example-configs
 
@@ -232,26 +222,22 @@ jobs:
             }
           }
 
-          const filename = `label-directory.${process.env.PROJECT_NAME}.json`;
-          const filepath = path.join('central', 'example-configs', filename);
-          fs.writeFileSync(filepath, JSON.stringify(labelDirectory, null, 2), 'utf8');
-
-          console.log(`Generated label-directory.json at FILEPATH = ${filepath}:`);
+          fs.writeFileSync(process.env.FILEPATH, JSON.stringify(labelDirectory, null, 2), 'utf8');
+          console.log(`Generated label directory at ${process.env.FILEPATH}; committing...`);
           console.log(JSON.stringify(labelDirectory, null, 2));
+          
           EOF
 
-          # persist FILEPATH for downstream steps
-          echo "FILEPATH=$filepath" >> $GITHUB_ENV
-        
-      - name: Commit file back to source repo
+      - name: Commit label directory to source repo
         run: |
-          cd central 
+          cd central
+          
+          # Convert workspace-relative path to repo-relative path
+          REPO_FILEPATH="${FILEPATH#central/}"
+          
           git config user.name "${{ github.event.inputs.github_app_name }}[bot]"
           git config user.email "${{ github.event.inputs.github_app_name }}@${ORG_NAME}.org"
-
-          echo "Committing: $FILEPATH"
-
-          git add "$FILEPATH"
+          
+          git add "$REPO_FILEPATH"
           git commit -m "Add label directory file for project $PROJECT_NAME" || echo "No changes to commit."
-
           git push

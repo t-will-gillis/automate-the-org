@@ -6,7 +6,7 @@ on:
       target_repo:
         description: 'Destination repo, e.g. "org/project":'
         required: true
-        default: 'hackforla/<project-repo>'
+        default: 'hackforla/'
       source_repo:
         description: 'Source repo, e.g. "org/central-repo":'
         required: true
@@ -52,6 +52,9 @@ jobs:
         run: |
           # Prevent partial command failures
           set -o pipefail
+
+          # Ensure key cleanup even if the script exits early
+          trap 'rm -f key.pem' EXIT
           
           # Generate JWT for GitHub App authentication
           printf "%s" "${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}" > key.pem
@@ -93,30 +96,37 @@ jobs:
             | jq -r '.id')
           
           if [[ -z "$INSTALLATION_ID" || "$INSTALLATION_ID" == "null" ]]; then
-            echo "::error title=Installation ID error::Could not get installation ID"
-
-            echo "::group::Troubleshooting"
-            echo "Ensure the GitHub App is installed on the organization"
-            echo "::endgroup::"
+            echo "::error title=GitHub App installation ID error::Could not retrieve GitHub App installation ID"
             exit 1
           fi
           
           echo "Installation ID: $INSTALLATION_ID"
 
-          # Exchange JWT for installation access token
+          # Extract project name from full path
+          PROJECT_NAME=$(echo "${{ github.event.inputs.target_repo }}" | cut -d'/' -f2)
+          
+          # Exchange JWT for installation access token with explicit permissions
           TOKEN_RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${JWT}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens")
+            -H "Content-Type: application/json" \
+            "https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens" \
+            -d '{
+            "repositories": ["'"${PROJECT_NAME}"'"],
+            "permissions": {
+              "contents": "write",
+              "pull_requests": "write"
+            }
+          }')
           
           APP_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.token')
           
           if [[ -z "$APP_TOKEN" || "$APP_TOKEN" == "null" ]]; then
-            echo "::error title=Access token error::Could not generate access token"
-
+            echo "::error title=JSON web token (JWT) error::Could not generate JSON web token (JWT)"
             echo "::group::Token generation response"
             echo "$TOKEN_RESPONSE"
             echo "::endgroup::"
+            
             exit 1
           fi
           
@@ -124,9 +134,35 @@ jobs:
           echo "::add-mask::$APP_TOKEN"
           echo "token=$APP_TOKEN" >> $GITHUB_OUTPUT
 
-          # Output token
-          rm key.pem
           echo "GitHub App installation token generated successfully"
+
+      - name: Validate authorization to destination repo
+        env:
+          APP_TOKEN: ${{ steps.generate-app-token.outputs.token }}
+        run: |
+          TARGET_REPO="${{ github.event.inputs.target_repo }}"
+          PROJECT_NAME=$(echo "${TARGET_REPO}" | cut -d'/' -f2)
+          echo "Validating write permissions on $TARGET_REPO..."
+          
+          # Check if the repository is in the token's accessible repositories list
+          REPOS_RESPONSE=$(curl -s \
+            -H "Authorization: Bearer $APP_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/installation/repositories")
+          
+          # Check if target repo is in the list
+          IS_ACCESSIBLE=$(echo "$REPOS_RESPONSE" | jq -r --arg repo "$TARGET_REPO" \
+            '.repositories[]? | select(.full_name == $repo) | .full_name')
+          
+          if [[ -z "$IS_ACCESSIBLE" ]]; then
+            echo "::error title=Repository access error::GitHub App is not able to access $TARGET_REPO"
+            echo "::group::The app may not be installed on this repository"
+            echo "$REPOS_RESPONSE"
+            echo "::endgroup::"
+            exit 1
+          fi
+          
+          echo "GitHub App token has required permissions to access $TARGET_REPO"
 
       - name: Prepare variables
         run: |
@@ -140,13 +176,14 @@ jobs:
               exit 1
               ;;
           esac
+
           TARGET_REPO="${{ github.event.inputs.target_repo }}"
           SOURCE_REPO="${{ github.event.inputs.source_repo }}"
           ROLLOUT_BRANCH="${{ github.event.inputs.rollout_branch }}"
           DRY_RUN="${{ github.event.inputs.dry_run }}"
           PROJECT_NAME=$(echo "${TARGET_REPO}" | cut -d'/' -f2)
           ORG_NAME=$(echo "$SOURCE_REPO" | cut -d'/' -f1)
-                 
+          
           echo "TARGET_REPO=${TARGET_REPO}" >> $GITHUB_ENV
           echo "SOURCE_REPO=${SOURCE_REPO}" >> $GITHUB_ENV
           echo "ROLLOUT_BRANCH=${ROLLOUT_BRANCH}" >> $GITHUB_ENV
@@ -155,21 +192,21 @@ jobs:
           echo "PROJECT_NAME=${PROJECT_NAME}" >> $GITHUB_ENV
           echo "ORG_NAME=${ORG_NAME}" >> $GITHUB_ENV
 
-      - name: Check whether label-directory.json exists in destination repo
+      - name: Check if label-directory.json exists in destination repo
         id: check-target-label-dir
         run: |
           DEST_FILEPATH="github-actions/workflow-configs/_data/label-directory.json"
           if [ -f "$DEST_FILEPATH" ]; then
             echo "TARGET_EXISTS=true" >> $GITHUB_ENV
-            echo "Label directory file exists in target repo. Do not overwrite."
+            echo "Label directory file exists in destination repo; continue without overwriting..."
           else
             echo "TARGET_EXISTS=false" >> $GITHUB_ENV
-            echo "Label directory file does not exist in target repo. Checking source..."
+            echo "Label directory file does not exist in destination repo; checking source repo..."
           fi
 
           echo "DEST_FILEPATH=$DEST_FILEPATH" >> $GITHUB_ENV
 
-      - name: Check whether label-directory.{PROJECT_NAME}.json exists in source repo
+      - name: Check if label-directory.json exists in source repo
         id: check-source-label-dir
         run: |
           if [[ "$TARGET_EXISTS" == "true" ]]; then
@@ -185,7 +222,7 @@ jobs:
             echo "Label directory file exists in source repo. Proceeding..."
           else
             echo "SOURCE_EXISTS=false" >> $GITHUB_ENV
-            echo "::error title=Source label directory missing::Label directory file does not exist in source repository"
+            echo "::error title=Label directory missing in source repo::Label directory file does not exist in source repository"
 
             echo "::group::Next steps"
             echo "Run the 'Rollout Project Label Directory' workflow first."
@@ -198,12 +235,6 @@ jobs:
           # persist for downstream steps
           echo "SRC_FILENAME=$SRC_FILENAME" >> $GITHUB_ENV
           echo "SRC_FILEPATH=$SRC_FILEPATH" >> $GITHUB_ENV
-
-      - name: Checkout source repo
-        uses: actions/checkout@v6
-        with:
-          repository: ${{ github.event.inputs.source_repo }}
-          path: central
 
       - name: Extract rollout config from PR template
         id: parse-config
@@ -365,7 +396,7 @@ jobs:
           git config user.name "${{ github.event.inputs.github_app_name }}[bot]"
           git config user.email "${{ github.event.inputs.github_app_name }}@${ORG_NAME}.org"
           
-          # Create rollout branch is does not exist
+          # Create rollout branch if it does not exist
           if git ls-remote --heads origin "$ROLLOUT_BRANCH" | grep -q "$ROLLOUT_BRANCH"; then
             echo "Checking out existing branch: $ROLLOUT_BRANCH"
             git fetch origin "$ROLLOUT_BRANCH"
