@@ -4,21 +4,26 @@ on:
   workflow_dispatch:
     inputs:
       target_repo:
-        description: 'Target repo, e.g. "org/project":'
+        description: 'Destination repo, e.g. "org/project":'
         required: true
         default: 'hackforla/'
       source_repo:
         description: 'Source repo, e.g. "org/central-repo":'
         required: true
         default: 'hackforla/automate-the-org'
+      template_file:
+        description: 'GitHub Action to Install:'
+        required: true
+        type: choice
+        default: 'Add Update Label Weekly'
+        options:
+          - 'Add Update Label Weekly'
+          - 'Update Label Directory'
+          - 'more coming soon...'
       rollout_branch:
         description: 'Branch name for rollout PR:'
         required: false
         default: 'automation/rollout-central-workflow'
-      template_file:
-        description: 'Template file (must exist in .github/templates/):'
-        required: true
-        default: 'pr_template_add_update.md'
       github_app_name:
         description: 'GitHub App name/slug:'
         required: true
@@ -48,14 +53,17 @@ jobs:
         run: |
           # Prevent partial command failures
           set -o pipefail
-          
+
+          # Ensure key cleanup even if the script exits early
+          trap 'rm -f key.pem' EXIT
+
           # Generate JWT for GitHub App authentication
           printf "%s" "${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}" > key.pem
           chmod 600 key.pem
 
           # Ensure key is written correctly
           if [[ ! -s key.pem ]]; then
-            echo "Error: private key is empty or missing"
+            echo "::error title=Private key error::Private key is empty or missing"
             exit 1
           fi
           
@@ -89,45 +97,97 @@ jobs:
             | jq -r '.id')
           
           if [[ -z "$INSTALLATION_ID" || "$INSTALLATION_ID" == "null" ]]; then
-            echo "Error: Could not get installation ID"
-            echo "Make sure the GitHub App is installed on the organization"
+            echo "::error title=GitHub App installation ID error::Could not retrieve GitHub App installation ID"
             exit 1
           fi
           
           echo "Installation ID: $INSTALLATION_ID"
 
-          # Exchange JWT for installation access token
+          # Extract project name from full path
+          PROJECT_NAME=$(echo "${{ github.event.inputs.target_repo }}" | cut -d'/' -f2)
+          
+          # Exchange JWT for installation access token with explicit permissions
           TOKEN_RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${JWT}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens")
+            -H "Content-Type: application/json" \
+            "https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens" \
+            -d '{
+              "repositories": ["'"${PROJECT_NAME}"'"],
+              "permissions": {
+                "contents": "write",
+                "pull_requests": "write"
+              }
+            }'
+          )
           
           APP_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.token')
           
           if [[ -z "$APP_TOKEN" || "$APP_TOKEN" == "null" ]]; then
-            echo "Error: Could not generate access token"
-            echo "Response: $TOKEN_RESPONSE"
+            echo "::error title=JSON web token (JWT) error::Could not generate JSON web token (JWT)"
+            echo "::group::Token generation response"
+            echo "$TOKEN_RESPONSE"
+            echo "::endgroup::"
             exit 1
           fi
           
           # Mask token in logs
           echo "::add-mask::$APP_TOKEN"
           echo "token=$APP_TOKEN" >> $GITHUB_OUTPUT
-
-          # Output token
-          rm key.pem
+          
           echo "GitHub App installation token generated successfully"
+
+      - name: Validate authorization to destination repo
+        env:
+          APP_TOKEN: ${{ steps.generate-app-token.outputs.token }}
+        run: |
+          TARGET_REPO="${{ github.event.inputs.target_repo }}"
+          PROJECT_NAME=$(echo "${TARGET_REPO}" | cut -d'/' -f2)
+          echo "Validating write permissions on '$TARGET_REPO'..."
+          
+          # Check if the repository is in the token's accessible repositories list
+          REPOS_RESPONSE=$(curl -s \
+            -H "Authorization: Bearer $APP_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/installation/repositories")
+          
+          # Check if target repo is in the list
+          IS_ACCESSIBLE=$(echo "$REPOS_RESPONSE" | jq -r --arg repo "$TARGET_REPO" \
+            '.repositories[]? | select(.full_name == $repo) | .full_name')
+          
+          if [[ -z "$IS_ACCESSIBLE" ]]; then
+            echo "::error title=Repository access error::GitHub App is not able to access '$TARGET_REPO'"
+            echo "::group::The app may not be installed on this repository"
+            echo "$REPOS_RESPONSE"
+            echo "::endgroup::"
+            exit 1
+          fi
+          
+          echo "GitHub App token has required permissions to access '$TARGET_REPO'"
 
       - name: Prepare variables
         run: |
+          # Select correct template file based on input
+          case "${{ github.event.inputs.template_file }}" in
+            "Add Update Label Weekly")
+              TEMPLATE_FILE="pr_template_add_update.md"
+              ;;
+            "Update Label Directory")
+              TEMPLATE_FILE="pr_template_update_label_directory.md"
+              ;;
+            *)
+              echo "::error title=Unknown template file option::Unknown template file option: '${{ github.event.inputs.template_file }}'"
+              exit 1
+              ;;
+          esac
+          
           TARGET_REPO="${{ github.event.inputs.target_repo }}"
           SOURCE_REPO="${{ github.event.inputs.source_repo }}"
           ROLLOUT_BRANCH="${{ github.event.inputs.rollout_branch }}"
-          TEMPLATE_FILE="${{ github.event.inputs.template_file }}"
           DRY_RUN="${{ github.event.inputs.dry_run }}"
           PROJECT_NAME=$(echo "${TARGET_REPO}" | cut -d'/' -f2)
           ORG_NAME=$(echo "$SOURCE_REPO" | cut -d'/' -f1)
-                 
+          
           echo "TARGET_REPO=${TARGET_REPO}" >> $GITHUB_ENV
           echo "SOURCE_REPO=${SOURCE_REPO}" >> $GITHUB_ENV
           echo "ROLLOUT_BRANCH=${ROLLOUT_BRANCH}" >> $GITHUB_ENV
@@ -136,25 +196,25 @@ jobs:
           echo "PROJECT_NAME=${PROJECT_NAME}" >> $GITHUB_ENV
           echo "ORG_NAME=${ORG_NAME}" >> $GITHUB_ENV
 
-      - name: Check whether label-directory.json exists in target repo
+      - name: Check if label-directory.json exists in destination repo
         id: check-target-label-dir
         run: |
           DEST_FILEPATH="github-actions/workflow-configs/_data/label-directory.json"
           if [ -f "$DEST_FILEPATH" ]; then
             echo "TARGET_EXISTS=true" >> $GITHUB_ENV
-            echo "Label directory file exists in target repo. Do not overwrite."
+            echo "Label directory file exists in '$TARGET_REPO'; continue without overwriting..."
           else
             echo "TARGET_EXISTS=false" >> $GITHUB_ENV
-            echo "Label directory file does not exist in target repo. Checking source..."
+            echo "Label directory file does not exist in '$TARGET_REPO'; check source repo..."
           fi
 
           echo "DEST_FILEPATH=$DEST_FILEPATH" >> $GITHUB_ENV
 
-      - name: Check whether label-directory.{PROJECT_NAME}.json exists in source repo
+      - name: Check if label-directory.json exists in source repo
         id: check-source-label-dir
         run: |
           if [[ "$TARGET_EXISTS" == "true" ]]; then
-            echo "Skip source check because target exists."
+            echo "Skip source check because file exists in destination repo."
             exit 0
           fi
 
@@ -166,21 +226,18 @@ jobs:
             echo "Label directory file exists in source repo. Proceeding..."
           else
             echo "SOURCE_EXISTS=false" >> $GITHUB_ENV
-            echo "Label directory file does not exist in source repo."
-            echo " ⮡  Run Rollout Project Label Directory first. Exiting..."
+            echo "::error title=Label directory missing in source repo::Label directory file does not exist in source repository"
+
+            echo "::group::Next steps"
+            echo "Run the 'Rollout Project Label Directory' workflow first."
+            echo "Expected directory: $LABEL_DIR"
+            echo "::endgroup::"
             exit 1
           fi
 
           # persist for downstream steps
           echo "SRC_FILENAME=$SRC_FILENAME" >> $GITHUB_ENV
           echo "SRC_FILEPATH=$SRC_FILEPATH" >> $GITHUB_ENV
-
-      - name: Checkout source repo
-        uses: actions/checkout@v6
-        with:
-          repository: ${{ github.event.inputs.source_repo }}
-          path: central
-
       - name: Extract rollout config from PR template
         id: parse-config
         run: |
@@ -188,7 +245,7 @@ jobs:
           TEMPLATE_PATH="central/.github/templates/$TEMPLATE_FILE"
 
           if [[ ! -f "$TEMPLATE_PATH" ]]; then
-            echo "Error: Template file not found at $TEMPLATE_PATH"
+            echo "::error title=Template file not found::Template file not found at '$TEMPLATE_PATH'"
             exit 1
           fi
 
@@ -197,7 +254,7 @@ jobs:
 
           # Verify extraction worked
           if [[ ! -s rollout-config.yaml ]]; then
-            echo "Error: Failed to extract YAML or file is empty"
+            echo "::error title=Failed to extract YAML::Failed to extract YAML or file is empty"
             exit 1
           fi
 
@@ -210,7 +267,7 @@ jobs:
           
           # Validate extraction
           if [[ "$WORKFLOW_SRC_RAW" == "null" ]] || [[ -z "$WORKFLOW_SRC_RAW" ]]; then
-            echo "Error: Failed to extract workflow_file.src from rollout-config.yaml"
+            echo "::error title=Failed to extract workflow file::Failed to extract `workflow_file.src` from rollout-config.yaml"
             exit 1
           fi
           
@@ -244,9 +301,9 @@ jobs:
           echo "Parsed and resolved config_files.json:"
           cat config_files.json
 
-      - name: Append source file if needed
+      - name: Include label-directory.json file if needed
         run: |
-          # Only append if target file does NOT exist but source file DOES exist
+          # Include label-directory.json file if applicable
           if [[ "$TARGET_EXISTS" == "false" && "$SOURCE_EXISTS" == "true" ]]; then
             echo "Appending label-directory.json to config_files.json"
 
@@ -261,22 +318,25 @@ jobs:
         run: |
           # Verify workflow source file exists
           if [[ ! -f "$WORKFLOW_SRC" ]]; then
-            echo "Error: Workflow source file not found at $WORKFLOW_SRC"
+            echo "::error title=Workflow source file not found::Workflow source file does not exist"
+            echo "::group::Details"
             echo "Expected path: $WORKFLOW_SRC"
+            echo "Verify the file exists in the source repository."
+            echo "::endgroup::"
             exit 1
           fi
           
           WORKFLOW_NAME=$(grep -E '^name:' "$WORKFLOW_SRC" | sed 's/^name:[[:space:]]*//')
           
           if [[ -z "$WORKFLOW_NAME" ]]; then
-            echo "Error: Could not extract workflow name from $WORKFLOW_SRC"
+            echo "::error title=Could not extract workflow name::Could not extract workflow name from $WORKFLOW_SRC"
             exit 1
           fi
           
           echo "WORKFLOW_NAME=$WORKFLOW_NAME" >> $GITHUB_ENV
           echo "Workflow name: $WORKFLOW_NAME"
 
-      - name: Rollout to target repo
+      - name: Rollout workflow files to destination repo
         env:
           APP_TOKEN: ${{ steps.generate-app-token.outputs.token }} 
         run: |
@@ -320,12 +380,12 @@ jobs:
             exit 0
           fi
 
-          # Clone the target repository
+          # Clone the destination repository
           echo "Cloning repository: $REPO (branch: $DEFAULT_BRANCH)"
           
           if ! git clone --depth 1 --branch "$DEFAULT_BRANCH" \
             "https://x-access-token:${APP_TOKEN}@github.com/${REPO}" temp-repo; then
-            echo "Error: Failed to clone repository $REPO"
+            echo "::error title=Failed to clone repository::Failed to clone repository $REPO"
             exit 1
           fi
           
@@ -336,7 +396,7 @@ jobs:
           git config user.name "${{ github.event.inputs.github_app_name }}[bot]"
           git config user.email "${{ github.event.inputs.github_app_name }}@${ORG_NAME}.org"
           
-          # Create rollout branch is does not exist
+          # Create rollout branch if it does not exist
           if git ls-remote --heads origin "$ROLLOUT_BRANCH" | grep -q "$ROLLOUT_BRANCH"; then
             echo "Checking out existing branch: $ROLLOUT_BRANCH"
             git fetch origin "$ROLLOUT_BRANCH"
