@@ -30,13 +30,6 @@ This PR adds the "Add Update Label Weekly" GitHub Actions workflow to your proje
   - `github-actions/workflow-configs/add-update-label-weekly-config.yml`
   - `github-actions/workflow-configs/templates/add-update-instructions-template.md`
 
-### File to be installed unless already present
-The following file is shared among the centralized GitHub Actions, and only needs to be  
-installed once. If this file does not exist in the repo, it will be generated and included with  
-the PR. It will be skipped if this file was installed previously.  
-- **Additional config file** _(unless installed previously)_:
-  - `github-actions/workflow-configs/_data/label-directory.json`
-
 ### What this workflow does
 
 - Monitors open, assigned issues with the default status "In progress (actively working)"
@@ -50,32 +43,23 @@ the PR. It will be skipped if this file was installed previously.
 - Starts in dry-run mode (safe testing)  
 - No project-specific tokens or secrets needed
 
-### Configuration required _**after merging**_
+### How to use
 
-1. **Review configurations** in the files shown (not here), and pay attention to the explanations in the files themselves:
+1. **Review configurations and make changes** to the respective files attached to this PR:
     - `github-actions/workflows/add-update-label-weekly.yml` 
-      - Adjust cron schedule as needed for your project (https://crontab.cronhub.io/) see note ⓵ 
-      - Update `if: github.repository == 'hackforla/repo-name'` see note ⓶
-      <!-- - Double-check the version in `uses: hackforla/automate-the-org/add-update-label-weekly@v1` see note ⓷ -->
+      - Adjust the cron schedule as needed for your project (https://crontab.cronhub.io/). 
+      - Current cron is scheduled to run Fridays at 0700 UTC, every week except in July and December.
     - `github-actions/workflow-configs/add-update-label-weekly-config.yml`
-      - Review `timeframes:`, `projectBoard:` column-status names, and the `required:` and the optional `ignored:` labels.
+      - Configure specific values where shown on the config YML, but do not edit the keys or change the formatting except as explicitly noted. 
+      - The `labels` section includes lists of label key values that represent actual repo labels: 
+        - The `required:` section shows label placeholder keys that are essential to the workflow. Each label key must be mapped to an actual label name used in your repo, but do not change the key itself. 
+        - The `filtering:` section includes keys to labels which, when added to an issue, tell the workflow to omit the issue from the update checks. In other words, an issue that is labeled with one of the 'filtering' labels will be ignored by the workflow. Match each label key shown with an actual label name. If you do not need a value, replace it with "".
+        - Preliminary label names may be shown. Confirm that all label names shown here exist in your repo or change as needed. 
+      - Configure the values for `timeframes:` referring to the notes in this section.
+      - Configure the `projectBoard:` column-status names. Similar to the labels section, confirm the default values shown or where needed change to match your Project Board. Do not delete or edit the keys themselves.
+      - Configure any remaining values as needed. 
     - `github-actions/workflow-configs/templates/add-update-instructions-template.md`
-      - We recommend keeping this version, but if needed edit using markdown syntax.
-    - `github-actions/workflow-configs/_data/label-directory.json`
-      - Edit `label-directory.json` as needed to ensure that each label key maps to an existing label name value:
-        - required label keys used by the automation:
-          - `statusUpdated` --> "Status: Updated" _(confirm)_
-          - `statusInactive1` --> "To Update !" _(confirm)_ 
-          - `statusInactive2` --> "2 Weeks Inactive" _(confirm)_
-        - label key used in the message template:
-          - statusHelpWanted --> "Help Wanted"  _(confirm)_
-        - optional: ignored label keys which tell the automation to ignore the issue: 
-          - _Note: For these label keys only, OK to add or remove as needed below_
-          - `draft`  --> "draft"  _(confirm)_
-          - `er` --> _none found: would be "ER"_
-          - `epic` --> "epic"  _(confirm)_
-          - `dependency` --> "Dependency"  _(confirm)_
-          - `complexity0` --> _none found: should be "Complexity: Prework"_
+      - We recommend keeping this version. If needed, edit using markdown syntax.
 
 3. **Test in dry-run mode**
    - Go to Actions tab → "Add Update Label Weekly"

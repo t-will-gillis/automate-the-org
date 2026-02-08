@@ -29,6 +29,7 @@ coverage/
 # Temporary files
 tmp/
 temp/
+not-used-delete/
 
 # Reserved files
 reserve-files/

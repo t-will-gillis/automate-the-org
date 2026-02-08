@@ -51,6 +51,9 @@ function resolveConfigs({
   // Validate required fields
   validateRequiredFields(config, requiredFields);
   
+  // Validate and resolve required labels if applicable
+  validateRequiredLabels(config);
+
   // Log the final configuration in DEBUG mode
   logger.debug('Final configuration:');
   logger.debug(JSON.stringify(config, null, 2));
@@ -124,6 +127,33 @@ function validateRequiredFields(config, requiredFields) {
   }
   
   logger.info(`Resolved required configuration fields`);
+}
+
+/**
+ * Resolves and validates required labels from config
+ * Adds config.labels.resolved if applicable
+ * @param {Object} config - Merged configuration object
+ */
+function validateRequiredLabels(config) {
+  if (!config || !config.labels || !config.labels.required) {
+    return;
+  }
+
+  const required = config.labels.required;
+
+  if (typeof required !== 'object' || Array.isArray(required)) {
+    throw new Error(
+      `Config validation failed. labels.required must be an object of label placeholder key: label name pairs`
+    );
+  }
+
+  for (const [key, value] of Object.entries(required)) {
+    if (typeof value !== 'string' || value === '') {
+      throw new Error(
+        `Config validation failed. Required label "${key}" must be a non-empty string`
+      );
+    }
+  }
 }
 
 module.exports = { resolve:resolveConfigs, deepMerge, validateRequiredFields };
