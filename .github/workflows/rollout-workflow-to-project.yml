@@ -6,7 +6,7 @@ on:
       target_repo:
         description: 'Destination repo, e.g. "org/project":'
         required: true
-        default: 'hackforla/<project-repo>'
+        default: 'hackforla/'
       source_repo:
         description: 'Source repo, e.g. "org/central-repo":'
         required: true
@@ -192,50 +192,6 @@ jobs:
           echo "PROJECT_NAME=${PROJECT_NAME}" >> $GITHUB_ENV
           echo "ORG_NAME=${ORG_NAME}" >> $GITHUB_ENV
 
-      - name: Check if label-directory.json exists in destination repo
-        id: check-target-label-dir
-        run: |
-          DEST_FILEPATH="github-actions/workflow-configs/_data/label-directory.json"
-          if [ -f "$DEST_FILEPATH" ]; then
-            echo "TARGET_EXISTS=true" >> $GITHUB_ENV
-            echo "Label directory file exists in destination repo; continue without overwriting..."
-          else
-            echo "TARGET_EXISTS=false" >> $GITHUB_ENV
-            echo "Label directory file does not exist in destination repo; checking source repo..."
-          fi
-
-          echo "DEST_FILEPATH=$DEST_FILEPATH" >> $GITHUB_ENV
-
-      - name: Check if label-directory.json exists in source repo
-        id: check-source-label-dir
-        run: |
-          if [[ "$TARGET_EXISTS" == "true" ]]; then
-            echo "Skip source check because file exists at destination."
-            exit 0
-          fi
-
-          SRC_FILENAME="label-directory.${PROJECT_NAME}.json"
-          SRC_FILEPATH="central/example-configs/$SRC_FILENAME"
-
-          if [ -f "$SRC_FILEPATH" ]; then
-            echo "SOURCE_EXISTS=true" >> $GITHUB_ENV
-            echo "Label directory file exists in source repo. Proceeding..."
-          else
-            echo "SOURCE_EXISTS=false" >> $GITHUB_ENV
-            echo "::error title=Label directory missing in source repo::Label directory file does not exist in source repository"
-
-            echo "::group::Next steps"
-            echo "Run the 'Rollout Project Label Directory' workflow first."
-            echo "Expected directory: $LABEL_DIR"
-            echo "::endgroup::"
-
-            exit 1
-          fi
-
-          # persist for downstream steps
-          echo "SRC_FILENAME=$SRC_FILENAME" >> $GITHUB_ENV
-          echo "SRC_FILEPATH=$SRC_FILEPATH" >> $GITHUB_ENV
-
       - name: Extract rollout config from PR template
         id: parse-config
         run: |
@@ -299,17 +255,16 @@ jobs:
           echo "Parsed and resolved config_files.json:"
           cat config_files.json
 
-      - name: Append source file if needed
+      - name: Check if workflow file already exists in target repo
+        id: check-workflow-exists
         run: |
-          # Only append if destination file does NOT exist but source file DOES exist
-          if [[ "$TARGET_EXISTS" == "false" && "$SOURCE_EXISTS" == "true" ]]; then
-            echo "Appending label-directory.json to config_files.json"
-
-            jq --arg src "$SRC_FILEPATH" --arg dest "$DEST_FILEPATH" \
-              '. += [{src: $src, dest: $dest}]' config_files.json > config_files_temp.json
-            mv config_files_temp.json config_files.json
-
-            echo "Appended $SRC_FILEPATH -> $DEST_FILEPATH to config_files.json"
+          # Check if the workflow file already exists in the target repo
+          if [[ -f "$WORKFLOW_DEST" ]]; then
+            echo "::warning title=Workflow file already exists::Workflow file already exists at $WORKFLOW_DEST in target repository. It may be overwritten."
+            echo "WORKFLOW_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "WORKFLOW_EXISTS=false" >> $GITHUB_ENV
+            echo "Workflow file does not exist in target repo. Proceeding with rollout..."
           fi
 
       - name: Extract workflow name from workflow source
@@ -407,11 +362,14 @@ jobs:
             git checkout -b "$ROLLOUT_BRANCH"
           fi
 
-          # Copy workflow file using workspace-relative path
+          # Copy workflow file using workspace-relative path and replace "<repo-name>" placeholder
           # $WORKFLOW_SRC is now relative to $GITHUB_WORKSPACE
           mkdir -p "$(dirname "$WORKFLOW_DEST")"
-          cp "$GITHUB_WORKSPACE/$WORKFLOW_SRC" "$WORKFLOW_DEST"
-          echo "Copied workflow: $WORKFLOW_SRC -> $WORKFLOW_DEST"
+          sed "s/<repo-name>/$PROJECT_NAME/g" "$GITHUB_WORKSPACE/$WORKFLOW_SRC" > "$WORKFLOW_DEST"
+          if grep -q "<repo-name>" "$WORKFLOW_DEST"; then
+            echo "::warning title=Placeholder not replaced::The placeholder <repo-name> was not found or not replaced in the workflow file at $WORKFLOW_DEST"
+          fi
+          echo "Copied and processed workflow: $WORKFLOW_SRC -> $WORKFLOW_DEST (replaced <repo-name> with $PROJECT_NAME)"
 
           # Copy project-specific config files using resolved paths
           if [ -s "$GITHUB_WORKSPACE/config_files.json" ]; then

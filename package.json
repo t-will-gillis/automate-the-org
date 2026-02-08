@@ -1,11 +1,11 @@
 {
   "name": "automate-the-org",
-  "version": "0.6.6",
+  "version": "0.7.0",
   "description": "Centralized GitHub Actions for repository maintenance and automation across the organization.",
   "private": true,
   "main": "dist/index.js",
   "scripts": {
-    "build": "ncc build gha-add-update-label-weekly/index.js -o gha-add-update-label-weekly/dist",
+    "build": "esbuild gha-add-update-label-weekly/index.js --bundle --platform=node --target=node20 --format=cjs --conditions=import --outfile=gha-add-update-label-weekly/dist/index.js",
     "build:all": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "echo \"Add linting script here\"",
@@ -23,19 +23,19 @@
     "pull-requests",
     "project-management"
   ],
-  "author": "Your Organization",
+  "author": "Hack for LA",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/hackforla/automate-the-org.git"
   },
   "homepage": "https://github.com/hackforla/automate-the-org.git",
   "dependencies": {
-    "@actions/core": "^1.11.1",
-    "@actions/github": "^6.0.1",
+    "@actions/core": "^3.0.0",
+    "@actions/github": "^9.0.0",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.38.1"
+    "esbuild": "^0.27.3"
   },
   "engines": {
     "node": ">=20.0.0"

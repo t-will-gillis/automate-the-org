@@ -1,8 +1,9 @@
+// Import modules
 const core = require('@actions/core');
 const github = require('@actions/github');
 const { logger } = require('../shared/format-log-messages');
 const resolveConfigs = require('../shared/resolve-configs');
-const resolveLabels = require('../shared/resolve-labels');
+const { checkIfLabelsInRepo } = require('../shared/get-repo-labels');
 const addUpdateLabelWeekly = require('../core/add-update-label-weekly');
 const yaml = require('js-yaml'); 
 
@@ -59,38 +60,22 @@ async function run() {
       ],
     });
     logger.log(``);
-    
-    // Determine label directory path from config
-    const labelDirectoryPath = config.labelDirectoryPath || 'github-actions/workflow-configs/_data/label-directory.json';
-    
-    // Resolve label keys to label names
-    logger.step(`Resolving labels...`);
-    const labels = await resolveLabels.resolve({
-      projectRepoPath,
-      labelDirectoryPath,
-      requiredLabelKeys: [
-        'statusUpdated',
-        'statusInactive1',
-        'statusInactive2',
-      ],
-      optionalLabelKeys: [
-        'draft',
-        'er',
-        'epic',
-        'dependency',
-        'skillsIssueCompleted',
-        'statusHelpWanted',
-      ],
-    });
+
+    // Confirm that all labels exist in the repo
+    await checkIfLabelsInRepo(
+      octokit, 
+      context, 
+      Object.values(config.labels.required),
+      Object.values(config.labels.filtering || {})
+    );
     logger.log(``);
-    
+
     // Execute the workflow
     logger.step(`Running Add Update Label Weekly workflow...`);
-    
+
     await addUpdateLabelWeekly({
       github: octokit,
       context,
-      labels,
       config,
     });
     
@@ -130,12 +115,12 @@ function getDefaultConfigs() {
     },
     
     labels: {
-      ignored: [
+      filtering: [
         'draft',
         'er',
         'epic',
         'dependency',
-        'complexity0'
+        'complexity: prework'
       ],
     },
     
@@ -149,8 +134,6 @@ function getDefaultConfigs() {
     timezone: 'America/Los_Angeles',
     
     commentTemplate: getDefaultCommentTemplate(),
-    
-    labelDirectoryPath: 'github-actions/workflow-configs/_data/label-directory.json',
   };
 }
 
@@ -164,11 +147,11 @@ function getDefaultCommentTemplate() {
 Please add an update comment using the below template (even if you have a pull request). Afterwards, remove 
 the \`\${label}\` label and add the \`\${statusUpdated}\` label.
 
-1. Progress: "What is the current status of your issue? What have you completed and what is left to do?"
-2. Blockers: "Explain any difficulties or errors encountered."
-3. Availability: "How much time will you have this week to work on this issue?"
-4. ETA: "When do you expect this issue to be completed?"
-5. Pictures (optional): "Add any pictures of the visual changes made to the site so far."
+1. Progress: What is the current status of your issue? What have you completed and what is left to do?
+2. Blockers: Explain any difficulties or errors encountered.
+3. Availability: How much time will you have this week to work on this issue?
+4. ETA: When do you expect this issue to be completed?
+5. Pictures (optional): Add any pictures of the visual changes made to the site so far.
 
 If you need help, be sure to either: 1) place your issue in the "\${questionsStatus}" status column of the 
 Project Board and ask for help at your next meeting; 2) put a \`\${statusHelpWanted}\` label on your issue 

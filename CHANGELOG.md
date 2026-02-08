@@ -10,6 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 _No unreleased changes yet._
 
+## v0.7.0
+2026-02-08
+- feat: removing the requirement for the workflow to install or reference the `label-directory-json`- removal will make it more intuitive for the PMs to specify which labels to use; the label names will be specified in the general `add-update-label-weekly-config.yml` config file rather than the label directory
+- docs: `pr_template_add_update.md` major rewrite of comments, also remove refs to `label-directory.json`
+- feat: `rollout-workflow-to-project.yml` remove refs to `label-directory.json`, check whether workflow is already installed, add warning if so, and automatically add the project name to the triggering workflow template
+- feat: move `rollout-project-label-directory.yml` and `resolve-configs.js` to `/not-used-delete/` since we are no longer using the label directory 
+- feat: revise and refactor `add-update-label-weekly.js` to extract the label names from the general config file instead of the label directory
+- feat: refactor `add-update-label-weekly-config.example.yml` to account for specifying the label names here
+- feat: minor revise `add-update-label-weekly.example.yml` to setup auto project name swapping
+- feat: `index.js` revise for change since now we are pulling the label name info from the config file and not the label directory
+- feat: `package.json` MAJOR change switching from vercel to esbuild due to difficulties updating vercel to address a vulnerability 
+- feat: new file `get-repo-labels.js` to aid in checking whether the labels specified by the PM exist in the repo
+- feat: `resolve-labels.js` moved to `/not-used-delete/` folder- no longer used but might want later
+- feat: revised `resolve-configs.js` to handle labels  
+
+
 ## v0.6.6
 2026-01-19
 - refactor: revisions to both Rollout YML files after testing to confirm they work still

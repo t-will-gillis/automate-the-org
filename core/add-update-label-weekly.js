@@ -9,8 +9,13 @@ const minimizeIssueComment = require('../shared/hide-issue-comment');
 // Global variables
 var github;
 var context;
-var labels;
 var config;
+
+// Label variables (set in main function based on config)
+var statusUpdated;
+var statusInactive1;
+var statusInactive2;
+var statusHelpWanted;
 
 // Time cutoff variables (set in main function based on config)
 var recentlyUpdatedByDays;
@@ -37,12 +42,17 @@ var upperLimitCutoffTime;
  * @param {Object} labels     - resolved label mappings (label keys to label names)
  * @param {Object} config     - configuration object
  */
-async function main({ github: g, context: c, labels: l, config: cfg }) {
+async function main({ github: g, context: c, config: cfg }) {
   github = g;
   context = c;
-  labels = l;
   config = cfg;
 
+  // Required labels
+  statusUpdated = config.labels.required.statusUpdated;
+  statusInactive1 = config.labels.required.statusInactive1;
+  statusInactive2 = config.labels.required.statusInactive2;
+  statusHelpWanted = config.labels.required.statusHelpWanted;
+  
   // Calculate cutoff times from config settings
   recentlyUpdatedByDays = config.timeframes.recentlyUpdatedByDays;
   needsUpdatingByDays = config.timeframes.needsUpdatingByDays;
@@ -56,7 +66,8 @@ async function main({ github: g, context: c, labels: l, config: cfg }) {
   isInactiveCutoffTime = new Date(Date.now() - isInactiveByDays * 24 * 60 * msPerMinute);
   upperLimitCutoffTime = new Date(Date.now() - (upperLimitDays * 24 * 60 - 10) * msPerMinute);
 
-  // Retrieve all issue numbers from a repo
+  // Retrieve issue for all open & assigned issues in the target status column,
+  // excluding issues with an 'filtering' label
   const issueNums = await getIssueNumsFromRepo();
 
   for (let issueNum of issueNums) {
@@ -71,18 +82,18 @@ async function main({ github: g, context: c, labels: l, config: cfg }) {
     // needs to be updated, or is up-to-date accordingly
     const responseObject = await isTimelineOutdated(timeline, issueNum, assignees);
 
-    if (responseObject.result === true && responseObject.labels === labels.statusInactive1) {
-      await removeLabels(github, context, config, issueNum, labels.statusUpdated, labels.statusInactive2);
+    if (responseObject.result === true && responseObject.labels === statusInactive1) {
+      await removeLabels(github, context, config, issueNum, statusUpdated, statusInactive2);
       await addLabels(github, context, config, issueNum, responseObject.labels);
-      await postComment(issueNum, assignees, labels.statusInactive1, responseObject.cutoff);
-    } else if (responseObject.result === true && responseObject.labels === labels.statusInactive2) {
-      await removeLabels(github, context, config, issueNum, labels.statusInactive1, labels.statusUpdated);
+      await postComment(issueNum, assignees, statusInactive1, responseObject.cutoff);
+    } else if (responseObject.result === true && responseObject.labels === statusInactive2) {
+      await removeLabels(github, context, config, issueNum, statusInactive1, statusUpdated);
       await addLabels(github, context, config, issueNum, responseObject.labels);
-      await postComment(issueNum, assignees, labels.statusInactive2, responseObject.cutoff);
-    } else if (responseObject.result === false && responseObject.labels === labels.statusUpdated) {
-      await removeLabels(github, context, config, issueNum, labels.statusInactive1, labels.statusInactive2);
+      await postComment(issueNum, assignees, statusInactive2, responseObject.cutoff);
+    } else if (responseObject.result === false && responseObject.labels === statusUpdated) {
+      await removeLabels(github, context, config, issueNum, statusInactive1, statusInactive2);
     } else if (responseObject.result === false && responseObject.labels === '') {
-      await removeLabels(github, context, config, issueNum, labels.statusInactive1, labels.statusInactive2, labels.statusUpdated);
+      await removeLabels(github, context, config, issueNum, statusInactive1, statusInactive2, statusUpdated);
     }
 
     // Minimize previous bot comments
@@ -93,15 +104,15 @@ async function main({ github: g, context: c, labels: l, config: cfg }) {
 
 
 /**
- * Finds issue numbers for all open & assigned issues, excluding issues with an 'ignored' label
+ * Finds issue numbers for all open & assigned issues, excluding issues with an 'filtering' label
  * and returning issue numbers only if their status matches the target status from config
  *
  * @returns {Promise<Array>} issueNums     - an array of open, assigned, and statused issue numbers
  */
 async function getIssueNumsFromRepo() {
 
-  // Exclude issues with any of the 'ignored' labels
-  const labelsToExclude = config.labels.ignored.map(key => labels[key]).filter(Boolean);
+  // Exclude issues with any of the 'filtering' labels
+  const labelsToExclude = config.labels.filtering || [];
   
   let issueNums = [];
   let pageNum = 1;
@@ -124,16 +135,16 @@ async function getIssueNumsFromRepo() {
       pageNum++;
     }
   }
-  
+
   for (let { number, labels: issueLabels, pull_request } of result) {
     if (!number) continue;
 
     // Exclude any pull requests that were found
-    if (pull_request != undefined) continue;
+    if (pull_request !== undefined) continue;
   
     // Exclude any issues that have excluded labels
-    const issueLabelNames = issueLabels.map((label) => label.name);
-    if (issueLabelNames.some((item) => labelsToExclude.includes(item))) continue;
+    const issueLabelNames = issueLabels.map(label => label.name);
+    if (issueLabelNames.some(item => labelsToExclude.includes(item))) continue;
 
     // For remaining issues, check if status === target status from config
     const { statusName } = await queryIssueInfo(github, context, number);
@@ -209,8 +220,8 @@ async function isTimelineOutdated(timeline, issueNum, assignees) { // assignees 
 
   // If 'lastActivityTimestamp' more recent than 'recentlyUpdatedCutoffTime', keep updated label and remove others
   if (isMomentRecent(lastActivityTimestamp, recentlyUpdatedCutoffTime)) {
-    logger.log(`Decision: This is sooner than ${recentlyUpdatedByDays} days ago, retain '${labels.statusUpdated}' label if exists`, 2);
-    return { result: false, labels: labels.statusUpdated, cutoff: recentlyUpdatedCutoffTime, commentsToBeMinimized }
+    logger.log(`Decision: This is sooner than ${recentlyUpdatedByDays} days ago, retain '${statusUpdated}' label if exists`, 2);
+    return { result: false, labels: statusUpdated, cutoff: recentlyUpdatedCutoffTime, commentsToBeMinimized }
   }
 
   // If 'lastActivityTimestamp' more recent than 'needsUpdatingCutoffTime', remove all labels
@@ -221,13 +232,13 @@ async function isTimelineOutdated(timeline, issueNum, assignees) { // assignees 
 
   // If 'lastActivityTimestamp' not yet older than the 'isInactiveCutoffTime', issue needs update label
   if (isMomentRecent(lastActivityTimestamp, isInactiveCutoffTime)) { 
-    logger.log(`Decision: This is between ${needsUpdatingByDays} and ${isInactiveByDays} days ago, use '${labels.statusInactive1}' label`, 2);
-    return { result: true, labels: labels.statusInactive1, cutoff: needsUpdatingCutoffTime, commentsToBeMinimized }
+    logger.log(`Decision: This is between ${needsUpdatingByDays} and ${isInactiveByDays} days ago, use '${statusInactive1}' label`, 2);
+    return { result: true, labels: statusInactive1, cutoff: needsUpdatingCutoffTime, commentsToBeMinimized }
   }
 
   // If 'lastActivityTimestamp' is older than the 'isInactiveCutoffTime', issue is outdated and needs inactive label
-  logger.log(`Decision: This is older than ${isInactiveByDays} days ago, use '${labels.statusInactive2}' label`, 2);
-  return { result: true, labels: labels.statusInactive2, cutoff: isInactiveCutoffTime, commentsToBeMinimized }
+  logger.log(`Decision: This is older than ${isInactiveByDays} days ago, use '${statusInactive2}' label`, 2);
+  return { result: true, labels: statusInactive2, cutoff: isInactiveCutoffTime, commentsToBeMinimized }
 }
 
 
@@ -287,9 +298,9 @@ function formatComment(assignees, labelString, cutoffTime) {
   let completedInstructions = config.commentTemplate
     .replace(/\$\{assignees\}/g, assignees)
     .replace(/\$\{label\}/g, labelString)
-    .replace(/\$\{statusUpdated\}/g, labels.statusUpdated || 'Status: Updated')
+    .replace(/\$\{statusUpdated\}/g, statusUpdated || 'status: updated')
     .replace(/\$\{questionsStatus\}/g, config.projectBoard.questionsStatus || 'Questions / In Review')
-    .replace(/\$\{statusHelpWanted\}/g, labels.statusHelpWanted || 'Status: Help Wanted')
+    .replace(/\$\{statusHelpWanted\}/g, statusHelpWanted || 'status: help wanted')
     .replace(/\$\{teamSlackChannel\}/g, config.teamSlackChannel || '')
     .replace(/\$\{cutoffTime\}/g, cutoffTimeString);
 
