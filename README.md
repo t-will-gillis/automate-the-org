@@ -267,6 +267,11 @@ Now run the automatic versioning utility. This will check whether you have set a
 ```bash
 ./auto-release.sh
 ```
+Once the final commit is made to the `master` branch at Automate-the-ORG:
+
+```bash
+./auto-update-master.sh
+```
 
 #### Versioning adjustments
 Use the following for adjustments to the version tags (but only if you understand what you are doing!) 
@@ -332,29 +337,29 @@ function loadYourActionConfig({ projectRepoPath, configPath, overrides }) {
 }
 ```
 
-### find-linked-issue.js
+#### find-linked-issue.js
 
-Parses PR body to find linked issues (fixes #123, resolves #456, etc.).
+- Parses PR body to find linked issues (fixes #123, resolves #456, etc.).
 
-### format-log-messages.js
+#### format-log-messages.js
 
-Wraps log messages with tags via `logger.` including `[STEP]`, `[INFO]`, `[SUCCESS]`, `[WARN]`, `[ERROR]`, `[DEBUG]`.
+- Wraps log messages with tags via `logger.` including `[STEP]`, `[INFO]`, `[SUCCESS]`, `[WARN]`, `[ERROR]`, `[DEBUG]`.
 
-### get-repo-labels.js
+#### get-repo-labels.js
 
-Retrieve list of all labels from repo
+- Retrieve list of all labels from repo
 
-### hide-issue-comment.js
+#### hide-issue-comment.js
 
-Minimizes comments using GraphQL mutation.
+- Minimizes comments using GraphQL mutation.
 
-### manage-issue-labels.js
+#### manage-issue-labels.js
 
-Collection of utility functions for issue labeling, including `addLabels()` and `deleteLabels()`.
+- Collection of utility functions for issue labeling, including `addLabels()` and `deleteLabels()`.
 
-### manage-issue-timeline.js
+#### manage-issue-timeline.js
 
-Collection of utility functions for issue timelines, including `setLocalTime()` and `getIssueTimeline()`.
+- Collection of utility functions for issue timelines, including `setLocalTime()` and `getIssueTimeline()`.
 
 ---
 
