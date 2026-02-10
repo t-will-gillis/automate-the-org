@@ -12,27 +12,10 @@ To install a centralized GitHub Actions (GHA) to a project repo, follow these st
   - [hfla-graphql-app](https://github.com/organizations/hackforla/settings/installations/92507394) gives the project (destination) repo access to scripts in "Automate the ORG" (source) during the workflow's runtime.  
   - For both, first scroll to "Repository access", then "Only select repositories", then select the corresponding project repo in the "Select repositories" dropdown.  
   - Click "Save".
-- Run the **"Rollout Project Label Directory"** workflow from "Automate the ORG". 
-  <details>  
-  &emsp;  
 
-  This workflow generates the `label-directory.json` for the PR to install on the destination repo, unless the file already exists.  
-
-  1. From the "Automate the ORG" repo, select "Actions", then select "Rollout Project Label Directory" on the left.  
-  2. On the right, click on "Run workflow" to bring up installation options.  
-  3. Confirm that the `master` branch is selected.  
-  4. Enter the `<project-repo>` for the "Destination repo".  
-  5. Do not change the "Source repo"  
-  6. Do not change the "GitHub App" name.  
-  7. Keep box checked for "Dry run mode".  
-  8. Click "Run workflow". If there are no errors, a project-specific `label-directory.json` file will be generated. If the file already exists on either the destination or source repo, the workflow will exit- see the workflow logs for more information.
-  </details>
-  &emsp;  
 - Run the **"Rollout Workflow to Project"** workflow from "Automate the ORG". 
   <details>  
   &emsp;  
-
-  This workflow generates the `label-directory.json` for the PR to install on the destination repo, unless the file already exists.  
 
   1. From the "Automate the ORG" repo, select "Actions", then select "Rollout Workflow to Project" on the left.  
   2. On the right, click on "Run workflow" to bring up installation options.  
@@ -54,7 +37,7 @@ workflow-configs/
 │
 ├── gha-add-update-label-weekly/        # "Add Update Label Weekly" workflow
 │   ├── dist/ 
-│   │   └── index.js                    # Vercel's generated build artifact / production entry point 
+│   │   └── index.js                    # Esbuild's generated build artifact / production entry point 
 │   ├── action.yml
 │   └── index.js
 │
@@ -64,24 +47,24 @@ workflow-configs/
 ├── shared/                             # Shared utilities across all actions
 │   ├── find-linked-issue.js            # 
 │   ├── format-log-messages.js          # `logger` utility to sort log messages
+│   ├── get-repo-labels.js              # Retrieves repo labels
 │   ├── hide-issue-comment.js           # Minimizes comments 
 │   ├── manage-issue-labels.js          # Set of issue-labelling utilities 
 │   ├── manage-issue-timeline.js        # Set of issue-timeline utilities
-│   ├── post-issue-comment.js           # 
-│   ├── query-issue-info.js             # 
-│   ├── resolve-configs.js              # Resolve config files
-│   └── resolve-labels.js               # Resolve label files
+│   ├── post-issue-comment.js           # Post comment on issue
+│   ├── query-issue-info.js             # Get issue data (GraphQL)
+│   └── resolve-configs.js              # Resolve config files
 │
 ├── example-configs/                    # Example configuration files
-│   ├── add-update-label-weekly-config.example.yml
-│   ├── add-update-label-weekly.example.yml
-│   └── label-directory.example.yml     # Example only- not used
+│   ├── add-update-instructions-template.example.md⎫  
+│   ├── add-update-label-weekly-config.example.yml ⎬ Configs for "Add Update Label Weekly"
+│   └── add-update-label-weekly.example.yml        ⎭ 
 │
 ├── .gitignore 
 ├── auto-release.sh                     # Script for updating version on a branch
 ├── auto-update-master.sh               # Script for updating version on the master
-├── package.json 
-├── package-lock.json 
+├── package.json                        
+├── package-lock.json                   
 ├── CHANGELOG.md                        # Change log for tracking changes per version
 └── README.md                           # This file
 ```
@@ -168,10 +151,6 @@ Copy and rename the example label directory file from `example-configs/` into yo
 ```bash
 # Ensure target folder exists
 mkdir -p .github/workflow-configs
-
-# Only if this file does not exist, copy to your local repo and rename 
-[ -f .github/workflow-configs/_data/label-directory.json ] && echo "File already exists" || curl -L https://github.com/hackforla/website/raw/main/workflow-configs/example-configs/label-directory.example.yml \
--o .github/workflow-configs/_data/label-directory.json
 ```
 Correlate the 'labelKey' values to the 'Label Names' that are applicable to your project in the format: 
 ```yml
@@ -182,29 +161,25 @@ labels:
   ...
 ```
 
-If you do not include the values in `.github/workflow-configs/_data/label-directory.json`, the default values shown in `.github/workflow-configs/add-update-label-weekly-config.yml` will apply. For this workflow, the default values are: 
+If you do not include the values in the config files, the default values shown in `.github/workflow-configs/add-update-label-weekly-config.yml` will apply. For this workflow, the default values are: 
 
 ```yml
-  # Required by the workflow:
-  statusUpdated: "Status: Updated"
-  statusInactive1: "To Update!"
-  statusInactive2: "2 weeks inactive"
-  statusHelpWanted: "Status: Help Wanted"
+# Required by the workflow:
+labels:
+  required:
+    statusUpdated: "Status: Updated"
+    statusInactive1: "To Update!"
+    statusInactive2: "2 weeks inactive"
+    statusHelpWanted: "Status: Help Wanted"
 
-  # Exclude issues with any of these labels: 
-  draft: "Draft"
-  er: "ER"
-  epic: "Epic"
-  dependency: "Dependency"
-  complexity0: "Complexity: Prework"
+# Filtering labels, exclude issues with any of these labels: 
+  filtering:
+   - "Draft"
+   - "ER"
+   - "Epic"
+   - "Dependency"
+   - "Complexity: Prework"
 ```
-
-Set the path in your config:
-
-```bash
-labelDirectoryPath: ".github/workflow-configs/_data/label-directory.json"
-```
-See [example-configs/label-directory.example.yml](./example-configs/label-directory.example.example.yml) for a complete example.
 
 
 
@@ -232,7 +207,7 @@ since the App is maintained centrally projects do not need to create tokens or s
 
 # Monorepo Development Notes
 
-The following applies to the maintenance of the `hackforla/automate-the-org` repo only.
+The following applies to the **maintenance** of the `hackforla/automate-the-org` repo only.
 ### Setup
 
 ```bash
@@ -243,7 +218,7 @@ npm install
 
 ### Adding Dependencies
 
-Since this is a composite action that runs in the GitHub Actions environment, dependencies are installed automatically. Just add them to `package.json`.
+Since this is a composite action that runs in the GitHub Actions environment, dependencies are installed automatically in `package.json`.
 
 ### Testing
 
@@ -357,10 +332,6 @@ function loadYourActionConfig({ projectRepoPath, configPath, overrides }) {
 }
 ```
 
-### resolve-labels.js
-
-- Loads and merges `label-directory.json` file with overrides.
-
 ### find-linked-issue.js
 
 Parses PR body to find linked issues (fixes #123, resolves #456, etc.).
@@ -369,6 +340,9 @@ Parses PR body to find linked issues (fixes #123, resolves #456, etc.).
 
 Wraps log messages with tags via `logger.` including `[STEP]`, `[INFO]`, `[SUCCESS]`, `[WARN]`, `[ERROR]`, `[DEBUG]`.
 
+### get-repo-labels.js
+
+Retrieve list of all labels from repo
 
 ### hide-issue-comment.js
 
