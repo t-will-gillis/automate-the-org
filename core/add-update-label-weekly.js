@@ -182,7 +182,7 @@ async function isTimelineOutdated(timeline, issueNum, assignees) { // assignees 
    
       if (issueState === 'open' && isCommentByAssignees(eventObj, assignees)) {
         logger.log(`Open pull request linked to issue; remove all update-related labels`, 2);
-        return { result: false, labels: '' };
+        return { result: false, labels: '', commentsToBeMinimized: [] };
       }
       if (issueState === 'closed' && isPR ) {
         logger.log(`Linked pull request closed; continue with checks`, 2);

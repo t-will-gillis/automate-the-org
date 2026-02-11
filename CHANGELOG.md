@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
-_No unreleased changes yet._
+- bug: fix bug in `add-update-label-weekly.js` whereby issues linked to an open PR do not return an empty list of bot comments, causing an error when iterating through `minimizeComments()`
 
 ## v1.0.0
 2026-02-09
