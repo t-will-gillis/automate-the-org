@@ -28637,7 +28637,7 @@ var require_add_update_label_weekly = __commonJS({
           const isPR = eventObj.source?.issue?.pull_request;
           if (issueState === "open" && isCommentByAssignees(eventObj, assignees)) {
             logger2.log(`Open pull request linked to issue; remove all update-related labels`, 2);
-            return { result: false, labels: "" };
+            return { result: false, labels: "", commentsToBeMinimized: [] };
           }
           if (issueState === "closed" && isPR) {
             logger2.log(`Linked pull request closed; continue with checks`, 2);
