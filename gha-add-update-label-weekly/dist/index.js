@@ -28780,8 +28780,9 @@ async function run() {
     logger.log(`=`.repeat(60));
     const token = core2.getInput("github-token", { required: true });
     const configPath = core2.getInput("config-path") || "github-actions/workflow-configs/add-update-label-weekly-config.yml";
-    const dryRunInput = core2.getInput("dry-run") || "false";
-    const dryRun = dryRunInput.toLowerCase() === "true";
+    const dryRunInput = core2.getBooleanInput("dry-run", { required: false });
+    const event = process.env.GITHUB_EVENT_NAME;
+    const dryRun = dryRunInput ?? event !== "schedule";
     dryRun && logger.warn(`Running in DRY-RUN mode: No changes will be applied`);
     logger.setDryRun(dryRun);
     const octokit = github.getOctokit(token);
