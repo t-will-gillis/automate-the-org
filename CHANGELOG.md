@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+_No unreleased changes yet._
+
+## v1.0.2
+2026-02-15
 - bug: update `auto-update-master.sh` to reset major tag when updating minor and patch versions
 - bug: refactor logic to ensure scheduled run defaults to dry-run = false, change switch to Boolean
 
