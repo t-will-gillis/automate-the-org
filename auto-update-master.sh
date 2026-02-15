@@ -73,11 +73,11 @@ if [[ $LAST_TAG =~ $VERSION_REGEX ]]; then
     FLOATING_BRANCH="v$MAJOR"
     
     # --- Update major tag pointing to the commit behind LAST_TAG ---
-    git tag -fa "$FLOATING_BRANCH" "$LAST_TAG^{}" -m "Update $FLOATING_BRANCH to $LAST_TAG"
+    git tag -f "$FLOATING_BRANCH" "$LAST_TAG"
     
     # --- Optional verification ---
-    FLOAT_SHA=$(git rev-parse "$FLOATING_BRANCH^{}")
-    LAST_SHA=$(git rev-parse "$LAST_TAG^{}")
+    FLOAT_SHA=$(git rev-parse "$FLOATING_BRANCH")
+    LAST_SHA=$(git rev-parse "$LAST_TAG")
     if [[ "$FLOAT_SHA" != "$LAST_SHA" ]]; then
       echo "❌ Major tag verification failed. Aborting push."
       exit 1
