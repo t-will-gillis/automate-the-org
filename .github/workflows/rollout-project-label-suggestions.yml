@@ -48,10 +48,10 @@ jobs:
         run: |
           # Prevent partial command failures
           set -o pipefail
-          
+
           # Ensure key cleanup even if the script exits early
           trap 'rm -f key.pem' EXIT
-
+          
           # Generate JWT for GitHub App authentication
           printf "%s" "${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}" > key.pem
           chmod 600 key.pem
@@ -98,18 +98,30 @@ jobs:
           
           echo "Installation ID: $INSTALLATION_ID"
 
-          # Exchange JWT for installation access token
+          # Extract project name from full path
+          PROJECT_NAME=$(echo "${{ github.event.inputs.target_repo }}" | cut -d'/' -f2)
+          
+          # Exchange JWT for installation access token with explicit permissions
           TOKEN_RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${JWT}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens")
+            -H "Content-Type: application/json" \
+            "https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens" \
+            -d '{
+            "repositories": ["'"${PROJECT_NAME}"'"],
+            "permissions": {
+              "contents": "read",
+              "pull_requests": "write"
+            }
+          }')
           
           APP_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.token')
           
           if [[ -z "$APP_TOKEN" || "$APP_TOKEN" == "null" ]]; then
             echo "::error title=JSON web token (JWT) error::Could not generate JSON web token (JWT)"
-            echo "Token generation response: "
+            echo "::group::Token generation response"
             echo "$TOKEN_RESPONSE"
+            echo "::endgroup::"
             
             exit 1
           fi
