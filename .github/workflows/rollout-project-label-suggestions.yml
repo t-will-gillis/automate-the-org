@@ -1,0 +1,168 @@
+name: Rollout Project Label Suggestions
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      target_repo:
+        description: 'Destination repo, e.g. "org/project":'
+        required: true
+        default: 'hackforla/'
+      source_repo:
+        description: 'Source repo, e.g. "org/central-repo":'
+        required: true
+        default: 'hackforla/automate-the-org'
+      github_app_name:
+        description: 'GitHub App name/slug:'
+        required: true
+        default: 'hfla-workflow-rollout'
+      dry_run:
+        description: 'Dry-run mode: preview changes only'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  Rollout-Label-Directory:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate target_repo format
+        run: |
+          if [[ "${{ github.event.inputs.target_repo }}" != */* ]]; then
+            echo "::error title=Invalid destination repo format::Destination repo must be in the format 'org/repo-name'"
+            exit 1
+          fi
+
+      - name: Checkout source repo
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.event.inputs.source_repo }}
+          path: central
+
+      - name: Generate token from GitHub App
+        id: generate-app-token
+        run: |
+          # Prevent partial command failures
+          set -o pipefail
+          
+          # Ensure key cleanup even if the script exits early
+          trap 'rm -f key.pem' EXIT
+
+          # Generate JWT for GitHub App authentication
+          printf "%s" "${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}" > key.pem
+          chmod 600 key.pem
+
+          # Ensure key is written correctly
+          if [[ ! -s key.pem ]]; then
+            echo "::error title=Private key error::Private key is empty or missing"
+            exit 1
+          fi
+          
+          NOW=$(date +%s)
+          IAT=$((NOW - 60))
+          EXP=$((NOW + 600))
+          
+          HEADER='{"alg":"RS256","typ":"JWT"}'
+          PAYLOAD="{\"iat\":${IAT},\"exp\":${EXP},\"iss\":\"${{ secrets.HFLA_WORKFLOW_APP_ID }}\"}"
+          
+          encode_url() {
+            openssl base64 -e | tr '+/' '-_' | tr -d '=\n\r'
+          }
+          
+          HEADER_B64=$(echo -n "$HEADER" | encode_url)
+          PAYLOAD_B64=$(echo -n "$PAYLOAD" | encode_url)
+          SIGNATURE=$(
+            printf "%s" "${HEADER_B64}.${PAYLOAD_B64}" \
+              | openssl dgst -sha256 -sign key.pem \
+              | encode_url
+          )
+          
+          JWT="${HEADER_B64}.${PAYLOAD_B64}.${SIGNATURE}"
+          echo "::add-mask::$JWT"
+
+          # Retrieve installation ID
+          INSTALLATION_ID=$(curl -s \
+            -H "Authorization: Bearer ${JWT}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/orgs/hackforla/installation" \
+            | jq -r '.id')
+          
+          if [[ -z "$INSTALLATION_ID" || "$INSTALLATION_ID" == "null" ]]; then
+            echo "::error title=GitHub App installation ID error::Could not retrieve GitHub App installation ID"
+            exit 1
+          fi
+          
+          echo "Installation ID: $INSTALLATION_ID"
+
+          # Exchange JWT for installation access token
+          TOKEN_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${JWT}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens")
+          
+          APP_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.token')
+          
+          if [[ -z "$APP_TOKEN" || "$APP_TOKEN" == "null" ]]; then
+            echo "::error title=JSON web token (JWT) error::Could not generate JSON web token (JWT)"
+            echo "Token generation response: "
+            echo "$TOKEN_RESPONSE"
+            
+            exit 1
+          fi
+          
+          # Mask token in logs
+          echo "::add-mask::$APP_TOKEN"
+          echo "token=$APP_TOKEN" >> $GITHUB_OUTPUT
+
+          echo "GitHub App installation token generated successfully"
+
+      - name: Checkout destination repo
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.event.inputs.target_repo }}
+          path: target
+          token: ${{ steps.generate-app-token.outputs.token }}
+
+      - name: Export workflow inputs to environment
+        run: |
+          TARGET_REPO="${{ github.event.inputs.target_repo }}"
+          SOURCE_REPO="${{ github.event.inputs.source_repo }}"
+          DRY_RUN="${{ github.event.inputs.dry_run }}"
+          PROJECT_NAME=$(echo "${TARGET_REPO}" | cut -d'/' -f2)
+          ORG_NAME=$(echo "$SOURCE_REPO" | cut -d'/' -f1)
+          
+          echo "TARGET_REPO=${TARGET_REPO}" >> $GITHUB_ENV
+          echo "SOURCE_REPO=${SOURCE_REPO}" >> $GITHUB_ENV
+          echo "DRY_RUN=${DRY_RUN}" >> $GITHUB_ENV
+          echo "PROJECT_NAME=${PROJECT_NAME}" >> $GITHUB_ENV
+          echo "ORG_NAME=${ORG_NAME}" >> $GITHUB_ENV
+
+      - name: Retrieve all labels from destination repo
+        id: retrieve-labels
+        env:
+          GITHUB_TOKEN: ${{ steps.generate-app-token.outputs.token }}
+        run: |
+          echo "Retrieving labels from '$TARGET_REPO'..."
+
+          # Fetch all labels into one JSON array
+          gh api --paginate "repos/$TARGET_REPO/labels?per_page=100" \
+            -H "Accept: application/vnd.github+json" > all_labels.json
+          
+          # Create initial list {name}
+          jq '[.[].name]' all_labels.json > repoLabels.json
+
+          echo "Retrieved labels:"
+          cat repoLabels.json
+
+          echo "REPO_LABELS=$(cat repoLabels.json | jq -c .)" >> $GITHUB_ENV
+
+      - name: Find similar labels
+        id: find-similar
+        env:
+          REPO_LABELS: ${{ env.REPO_LABELS }}
+        run: |
+          node ./workflow-helpers/find-similar-labels.js

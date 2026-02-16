@@ -1,5 +1,5 @@
 {
-  "name": "automate-the-org",
+  "name": "add-update-label-weekly",
   "version": "1.0.2",
   "description": "Centralized GitHub Actions for repository maintenance and automation across the organization.",
   "private": true,

@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       dry-run:
-        description: 'Run in dry-run mode to preview changes- will not update labels or comments.'
+        description: 'Run in dry-run mode to preview changes: will not update labels or comments.'
         type: boolean
         options:
         default: true
