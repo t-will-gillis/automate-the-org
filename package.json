@@ -1,6 +1,6 @@
 {
-  "name": "automate-the-org",
-  "version": "1.0.1",
+  "name": "add-update-label-weekly",
+  "version": "1.0.3",
   "description": "Centralized GitHub Actions for repository maintenance and automation across the organization.",
   "private": true,
   "main": "dist/index.js",

@@ -5,7 +5,7 @@ const { logger } = require('../shared/format-log-messages');
 const resolveConfigs = require('../shared/resolve-configs');
 const { checkIfLabelsInRepo } = require('../shared/get-repo-labels');
 const addUpdateLabelWeekly = require('../core/add-update-label-weekly');
-const yaml = require('js-yaml'); 
+const packageJson = require('../package.json'); 
 
 /**
  * Main entry point for the Add Update Label Weekly action
@@ -20,8 +20,10 @@ async function run() {
     // Get action inputs
     const token = core.getInput('github-token', { required: true });
     const configPath = core.getInput('config-path') || 'github-actions/workflow-configs/add-update-label-weekly-config.yml';
-    const dryRunInput = core.getInput('dry-run') || 'false';
-    const dryRun = (dryRunInput).toLowerCase() === 'true';
+    // Dry-run mode defaults to: false for scheduled run; true unless overridden for manual run
+    const dryRunInput = core.getBooleanInput('dry-run', { required: false });
+    const event = process.env.GITHUB_EVENT_NAME;
+    const dryRun = dryRunInput ?? (event !== 'schedule');
     dryRun && logger.warn(`Running in DRY-RUN mode: No changes will be applied`);
     logger.setDryRun(dryRun);
     
@@ -35,8 +37,9 @@ async function run() {
       throw new Error(`GITHUB_WORKSPACE environment variable not set`);
     }
     
+    logger.log(``);
     logger.info(`Project repository: ${context.repo.owner}/${context.repo.repo}`);
-    logger.info(`Working directory: ${projectRepoPath}`);
+    logger.info(`Workflow version: ${packageJson.name}@${packageJson.version}`);
     logger.log(``);
     
     // Define workflow-specific defaults

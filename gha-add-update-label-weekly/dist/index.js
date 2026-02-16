@@ -28188,7 +28188,7 @@ var require_resolve_configs = __commonJS({
   "shared/resolve-configs.js"(exports2, module2) {
     var fs3 = require("fs");
     var path6 = require("path");
-    var yaml2 = (init_js_yaml(), __toCommonJS(js_yaml_exports));
+    var yaml = (init_js_yaml(), __toCommonJS(js_yaml_exports));
     var { logger: logger2 } = require_format_log_messages();
     function resolveConfigs2({
       projectRepoPath = process.env.GITHUB_WORKSPACE,
@@ -28202,7 +28202,7 @@ var require_resolve_configs = __commonJS({
       if (fs3.existsSync(fullPath)) {
         try {
           const fileContents = fs3.readFileSync(fullPath, "utf8");
-          projectConfig = yaml2.load(fileContents) || {};
+          projectConfig = yaml.load(fileContents) || {};
           logger2.info(`Loaded configuration from: ${configPath}`);
         } catch (error2) {
           if (error2.name === "YAMLException") {
@@ -28765,6 +28765,55 @@ var require_add_update_label_weekly = __commonJS({
   }
 });
 
+// package.json
+var require_package = __commonJS({
+  "package.json"(exports2, module2) {
+    module2.exports = {
+      name: "add-update-label-weekly",
+      version: "1.0.2",
+      description: "Centralized GitHub Actions for repository maintenance and automation across the organization.",
+      private: true,
+      main: "dist/index.js",
+      scripts: {
+        build: "esbuild gha-add-update-label-weekly/index.js --bundle --platform=node --target=node20 --format=cjs --conditions=import --outfile=gha-add-update-label-weekly/dist/index.js",
+        "build:all": "npm run build",
+        test: 'echo "Error: no test specified" && exit 1',
+        lint: 'echo "Add linting script here"',
+        format: 'echo "Add formatting script here"'
+      },
+      repository: {
+        type: "git",
+        url: "git+https://github.com/hackforla/automate-the-org.git"
+      },
+      keywords: [
+        "github-actions",
+        "automation",
+        "maintenance",
+        "issues",
+        "pull-requests",
+        "project-management"
+      ],
+      author: "Hack for LA",
+      license: "MIT",
+      bugs: {
+        url: "https://github.com/hackforla/automate-the-org.git"
+      },
+      homepage: "https://github.com/hackforla/automate-the-org.git",
+      dependencies: {
+        "@actions/core": "^3.0.0",
+        "@actions/github": "^9.0.0",
+        "js-yaml": "^4.1.0"
+      },
+      devDependencies: {
+        esbuild: "^0.27.3"
+      },
+      engines: {
+        node: ">=20.0.0"
+      }
+    };
+  }
+});
+
 // gha-add-update-label-weekly/index.js
 var core2 = (init_core(), __toCommonJS(core_exports));
 var github = (init_github(), __toCommonJS(github_exports));
@@ -28772,7 +28821,7 @@ var { logger } = require_format_log_messages();
 var resolveConfigs = require_resolve_configs();
 var { checkIfLabelsInRepo } = require_get_repo_labels();
 var addUpdateLabelWeekly = require_add_update_label_weekly();
-var yaml = (init_js_yaml(), __toCommonJS(js_yaml_exports));
+var packageJson = require_package();
 async function run() {
   try {
     logger.log(`=`.repeat(60));
@@ -28780,8 +28829,9 @@ async function run() {
     logger.log(`=`.repeat(60));
     const token = core2.getInput("github-token", { required: true });
     const configPath = core2.getInput("config-path") || "github-actions/workflow-configs/add-update-label-weekly-config.yml";
-    const dryRunInput = core2.getInput("dry-run") || "false";
-    const dryRun = dryRunInput.toLowerCase() === "true";
+    const dryRunInput = core2.getBooleanInput("dry-run", { required: false });
+    const event = process.env.GITHUB_EVENT_NAME;
+    const dryRun = dryRunInput ?? event !== "schedule";
     dryRun && logger.warn(`Running in DRY-RUN mode: No changes will be applied`);
     logger.setDryRun(dryRun);
     const octokit = github.getOctokit(token);
@@ -28790,8 +28840,9 @@ async function run() {
     if (!projectRepoPath) {
       throw new Error(`GITHUB_WORKSPACE environment variable not set`);
     }
+    logger.log(``);
     logger.info(`Project repository: ${context3.repo.owner}/${context3.repo.repo}`);
-    logger.info(`Working directory: ${projectRepoPath}`);
+    logger.info(`Workflow version: ${packageJson.name}@${packageJson.version}`);
     logger.log(``);
     const defaults2 = getDefaultConfigs();
     logger.step(`Resolving configurations...`);

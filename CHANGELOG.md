@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 _No unreleased changes yet._
 
+## v1.0.3
+2026-02-16
+- feat: add version tag to output so we can confirm intended version is running
+- feat: implement an initial version of the label matching function `rollout-project-label-suggestion.yml`
+
+## v1.0.2
+2026-02-15
+- bug: update `auto-update-master.sh` to reset major tag when updating minor and patch versions
+- bug: refactor logic to ensure scheduled run defaults to dry-run = false; change switch to Boolean
+
+
 ## v1.0.1
 2026-02-10
 - bug: fix bug in `add-update-label-weekly.js` whereby issues linked to an open PR do not return an empty list of bot comments, causing an error when iterating through `minimizeComments()`
