@@ -172,9 +172,18 @@ jobs:
 
           echo "REPO_LABELS=$(cat repoLabels.json | jq -c .)" >> $GITHUB_ENV
 
+      - name: Debug - List files
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Contents of .github:"
+          ls -la .github/
+          echo "Contents of .github/workflow-helpers:"
+          ls -la .github/workflow-helpers/ || echo "workflow-helpers directory doesn't exist"
+          
       - name: Find similar labels
         id: find-similar
         env:
           REPO_LABELS: ${{ env.REPO_LABELS }}
         run: |
-          node .github/workflow-helpers/find-similar-labels.js
+          node ../.github/workflow-helpers/find-similar-labels.js
