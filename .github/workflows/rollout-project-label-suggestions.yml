@@ -43,101 +43,101 @@ jobs:
           repository: ${{ github.event.inputs.source_repo }}
           path: central
 
-      - name: Generate token from GitHub App
-        id: generate-app-token
-        run: |
-          # Prevent partial command failures
-          set -o pipefail
+      # - name: Generate token from GitHub App
+      #   id: generate-app-token
+      #   run: |
+      #     # Prevent partial command failures
+      #     set -o pipefail
 
-          # Ensure key cleanup even if the script exits early
-          trap 'rm -f key.pem' EXIT
+      #     # Ensure key cleanup even if the script exits early
+      #     trap 'rm -f key.pem' EXIT
           
-          # Generate JWT for GitHub App authentication
-          printf "%s" "${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}" > key.pem
-          chmod 600 key.pem
+      #     # Generate JWT for GitHub App authentication
+      #     printf "%s" "${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}" > key.pem
+      #     chmod 600 key.pem
 
-          # Ensure key is written correctly
-          if [[ ! -s key.pem ]]; then
-            echo "::error title=Private key error::Private key is empty or missing"
-            exit 1
-          fi
+      #     # Ensure key is written correctly
+      #     if [[ ! -s key.pem ]]; then
+      #       echo "::error title=Private key error::Private key is empty or missing"
+      #       exit 1
+      #     fi
           
-          NOW=$(date +%s)
-          IAT=$((NOW - 60))
-          EXP=$((NOW + 600))
+      #     NOW=$(date +%s)
+      #     IAT=$((NOW - 60))
+      #     EXP=$((NOW + 600))
           
-          HEADER='{"alg":"RS256","typ":"JWT"}'
-          PAYLOAD="{\"iat\":${IAT},\"exp\":${EXP},\"iss\":\"${{ secrets.HFLA_WORKFLOW_APP_ID }}\"}"
+      #     HEADER='{"alg":"RS256","typ":"JWT"}'
+      #     PAYLOAD="{\"iat\":${IAT},\"exp\":${EXP},\"iss\":\"${{ secrets.HFLA_WORKFLOW_APP_ID }}\"}"
           
-          encode_url() {
-            openssl base64 -e | tr '+/' '-_' | tr -d '=\n\r'
-          }
+      #     encode_url() {
+      #       openssl base64 -e | tr '+/' '-_' | tr -d '=\n\r'
+      #     }
           
-          HEADER_B64=$(echo -n "$HEADER" | encode_url)
-          PAYLOAD_B64=$(echo -n "$PAYLOAD" | encode_url)
-          SIGNATURE=$(
-            printf "%s" "${HEADER_B64}.${PAYLOAD_B64}" \
-              | openssl dgst -sha256 -sign key.pem \
-              | encode_url
-          )
+      #     HEADER_B64=$(echo -n "$HEADER" | encode_url)
+      #     PAYLOAD_B64=$(echo -n "$PAYLOAD" | encode_url)
+      #     SIGNATURE=$(
+      #       printf "%s" "${HEADER_B64}.${PAYLOAD_B64}" \
+      #         | openssl dgst -sha256 -sign key.pem \
+      #         | encode_url
+      #     )
           
-          JWT="${HEADER_B64}.${PAYLOAD_B64}.${SIGNATURE}"
-          echo "::add-mask::$JWT"
+      #     JWT="${HEADER_B64}.${PAYLOAD_B64}.${SIGNATURE}"
+      #     echo "::add-mask::$JWT"
 
-          # Retrieve installation ID
-          INSTALLATION_ID=$(curl -s \
-            -H "Authorization: Bearer ${JWT}" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/orgs/hackforla/installation" \
-            | jq -r '.id')
+      #     # Retrieve installation ID
+      #     INSTALLATION_ID=$(curl -s \
+      #       -H "Authorization: Bearer ${JWT}" \
+      #       -H "Accept: application/vnd.github+json" \
+      #       "https://api.github.com/orgs/hackforla/installation" \
+      #       | jq -r '.id')
           
-          if [[ -z "$INSTALLATION_ID" || "$INSTALLATION_ID" == "null" ]]; then
-            echo "::error title=GitHub App installation ID error::Could not retrieve GitHub App installation ID"
-            exit 1
-          fi
+      #     if [[ -z "$INSTALLATION_ID" || "$INSTALLATION_ID" == "null" ]]; then
+      #       echo "::error title=GitHub App installation ID error::Could not retrieve GitHub App installation ID"
+      #       exit 1
+      #     fi
           
-          echo "Installation ID: $INSTALLATION_ID"
+      #     echo "Installation ID: $INSTALLATION_ID"
 
-          # Extract project name from full path
-          PROJECT_NAME=$(echo "${{ github.event.inputs.target_repo }}" | cut -d'/' -f2)
+      #     # Extract project name from full path
+      #     PROJECT_NAME=$(echo "${{ github.event.inputs.target_repo }}" | cut -d'/' -f2)
           
-          # Exchange JWT for installation access token with explicit permissions
-          TOKEN_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Bearer ${JWT}" \
-            -H "Accept: application/vnd.github+json" \
-            -H "Content-Type: application/json" \
-            "https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens" \
-            -d '{
-            "repositories": ["'"${PROJECT_NAME}"'"],
-            "permissions": {
-              "contents": "read",
-              "pull_requests": "write"
-            }
-          }')
+      #     # Exchange JWT for installation access token with explicit permissions
+      #     TOKEN_RESPONSE=$(curl -s -X POST \
+      #       -H "Authorization: Bearer ${JWT}" \
+      #       -H "Accept: application/vnd.github+json" \
+      #       -H "Content-Type: application/json" \
+      #       "https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens" \
+      #       -d '{
+      #       "repositories": ["'"${PROJECT_NAME}"'"],
+      #       "permissions": {
+      #         "contents": "read",
+      #         "pull_requests": "write"
+      #       }
+      #     }')
           
-          APP_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.token')
+      #     APP_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.token')
           
-          if [[ -z "$APP_TOKEN" || "$APP_TOKEN" == "null" ]]; then
-            echo "::error title=JSON web token (JWT) error::Could not generate JSON web token (JWT)"
-            echo "::group::Token generation response"
-            echo "$TOKEN_RESPONSE"
-            echo "::endgroup::"
+      #     if [[ -z "$APP_TOKEN" || "$APP_TOKEN" == "null" ]]; then
+      #       echo "::error title=JSON web token (JWT) error::Could not generate JSON web token (JWT)"
+      #       echo "::group::Token generation response"
+      #       echo "$TOKEN_RESPONSE"
+      #       echo "::endgroup::"
             
-            exit 1
-          fi
+      #       exit 1
+      #     fi
           
-          # Mask token in logs
-          echo "::add-mask::$APP_TOKEN"
-          echo "token=$APP_TOKEN" >> $GITHUB_OUTPUT
+      #     # Mask token in logs
+      #     echo "::add-mask::$APP_TOKEN"
+      #     echo "token=$APP_TOKEN" >> $GITHUB_OUTPUT
 
-          echo "GitHub App installation token generated successfully"
+      #     echo "GitHub App installation token generated successfully"
 
-      - name: Checkout destination repo
-        uses: actions/checkout@v6
-        with:
-          repository: ${{ github.event.inputs.target_repo }}
-          path: target
-          token: ${{ steps.generate-app-token.outputs.token }}
+      # - name: Checkout destination repo
+      #   uses: actions/checkout@v6
+      #   with:
+      #     repository: ${{ github.event.inputs.target_repo }}
+      #     path: target
+      #     token: ${{ steps.generate-app-token.outputs.token }}
 
       - name: Export workflow inputs to environment
         run: |
