@@ -172,6 +172,7 @@ async function isTimelineOutdated(timeline, issueNum, assignees) { // assignees 
   for (let i = timeline.length - 1; i >= 0; i--) {
     let eventObj = timeline[i];
     let eventType = eventObj.event;
+    let eventTimestamp = eventObj.updated_at || eventObj.created_at;
 
     // If cross-referenced and fixed/resolved/closed by assignee and the pull request is open, remove all 
     // update-related labels. (Once a PR is opened, remove all labels because we focus on the PR, not the issue.)
@@ -189,12 +190,11 @@ async function isTimelineOutdated(timeline, issueNum, assignees) { // assignees 
       }
     }
 
-    let eventTimestamp = eventObj.updated_at || eventObj.created_at;
-
     // Update for the most recent 'lastCommentTimestamp' or 'lastAssignedTimestamp' 
-    if (!lastCommentTimestamp && eventType === 'commented' && isCommentByAssignees(eventObj, assignees)) {
+    if (!lastCommentTimestamp && eventType === 'commented' && assignees.includes(eventObj.user?.login)) {
       lastCommentTimestamp = eventTimestamp;
-    } else if (!lastAssignedTimestamp && eventType === 'assigned' && isCommentByAssignees(eventObj, assignees)) {
+    }
+    if (!lastAssignedTimestamp && eventType === 'assigned' && assignees.includes(eventObj.assignee?.login)) {
       lastAssignedTimestamp = eventTimestamp;
     }
 
@@ -210,28 +210,41 @@ async function isTimelineOutdated(timeline, issueNum, assignees) { // assignees 
   }
 
   // Determine the latest activity timestamp and activity type
-  let [ lastActivityTimestamp, lastActivityType ] =
-    lastCommentTimestamp > lastAssignedTimestamp
-    ? [lastCommentTimestamp, 'Assignee\'s last comment']
-    : [lastAssignedTimestamp, 'Assignee\'s assignment'];
+  const lastComment = lastCommentTimestamp ? new Date(lastCommentTimestamp) : null;
+  const lastAssigned = lastAssignedTimestamp ? new Date(lastAssignedTimestamp) : null;
 
-  lastActivityTimestamp = setLocalTime(lastActivityTimestamp);
+  let lastActivityTimestamp, lastActivityType;
+
+  if (!lastAssigned || (lastComment && lastComment > lastAssigned)) {
+    lastActivityTimestamp = lastCommentTimestamp;
+    lastActivityType = "Assignee's last comment";
+  } else {
+    lastActivityTimestamp = lastAssignedTimestamp;
+    lastActivityType = "Assignee's assignment";
+  }
+
+  // Save ISO string for cutoff time comparisons, but convert to local time for logging and comments
+  const lastActivityTimestampISO = lastActivityTimestamp;
+
+  if (lastActivityTimestamp) {
+    lastActivityTimestamp = setLocalTime(lastActivityTimestamp);
+  }
   logger.log(`Update status: ${lastActivityType} was at ${lastActivityTimestamp}`, 2);
 
   // If 'lastActivityTimestamp' more recent than 'recentlyUpdatedCutoffTime', keep updated label and remove others
-  if (isMomentRecent(lastActivityTimestamp, recentlyUpdatedCutoffTime)) {
+  if (isMomentRecent(lastActivityTimestampISO, recentlyUpdatedCutoffTime)) {
     logger.log(`Decision: This is sooner than ${recentlyUpdatedByDays} days ago, retain '${statusUpdated}' label if exists`, 2);
     return { result: false, labels: statusUpdated, cutoff: recentlyUpdatedCutoffTime, commentsToBeMinimized }
   }
 
   // If 'lastActivityTimestamp' more recent than 'needsUpdatingCutoffTime', remove all labels
-  if (isMomentRecent(lastActivityTimestamp, needsUpdatingCutoffTime)) {
+  if (isMomentRecent(lastActivityTimestampISO, needsUpdatingCutoffTime)) {
     logger.log(`Decision: This is between ${recentlyUpdatedByDays} and ${needsUpdatingByDays} days ago, no update-related labels`, 2);
     return { result: false, labels: '', cutoff: needsUpdatingCutoffTime, commentsToBeMinimized } 
   }
 
   // If 'lastActivityTimestamp' not yet older than the 'isInactiveCutoffTime', issue needs update label
-  if (isMomentRecent(lastActivityTimestamp, isInactiveCutoffTime)) { 
+  if (isMomentRecent(lastActivityTimestampISO, isInactiveCutoffTime)) { 
     logger.log(`Decision: This is between ${needsUpdatingByDays} and ${isInactiveByDays} days ago, use '${statusInactive1}' label`, 2);
     return { result: true, labels: statusInactive1, cutoff: needsUpdatingCutoffTime, commentsToBeMinimized }
   }
