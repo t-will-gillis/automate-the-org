@@ -177,4 +177,5 @@ jobs:
         env:
           REPO_LABELS: ${{ env.REPO_LABELS }}
         run: |
-          node ../workflow-helpers/find-similar-labels.js
+          node central/.github/workflow-helpers/find-similar-labels.js
+
