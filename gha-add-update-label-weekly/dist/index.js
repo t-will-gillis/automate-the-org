@@ -28635,6 +28635,7 @@ var require_add_update_label_weekly = __commonJS({
       for (let i = timeline.length - 1; i >= 0; i--) {
         let eventObj = timeline[i];
         let eventType = eventObj.event;
+        let eventTimestamp = eventObj.updated_at || eventObj.created_at;
         if (eventType === "cross-referenced" && isLinkedIssue(eventObj, issueNum)) {
           const issueState = eventObj.source?.issue?.state;
           const isPR = eventObj.source?.issue?.pull_request;
@@ -28646,31 +28647,45 @@ var require_add_update_label_weekly = __commonJS({
             logger2.log(`Linked pull request closed; continue with checks`, 2);
           }
         }
-        let eventTimestamp = eventObj.updated_at || eventObj.created_at;
         if (issueNum === 1273) {
           console.log(`Event #${i} for issue #${issueNum}: type=${eventType}, timestamp=${eventTimestamp}`);
         }
-        if (!lastCommentTimestamp && eventType === "commented" && isCommentByAssignees(eventObj, assignees)) {
-          lastCommentTimestamp = eventTimestamp;
-        } else if (!lastAssignedTimestamp && eventType === "assigned" && isCommentByAssignees(eventObj, assignees)) {
+        if (!lastAssignedTimestamp && eventType === "assigned" && assignees.includes(eventObj.assignee?.login)) {
           lastAssignedTimestamp = eventTimestamp;
+          console.log("Assigned user:", eventObj.assignee?.login);
+        }
+        if (!lastCommentTimestamp && eventType === "commented" && assignees.includes(eventObj.user?.login)) {
+          lastCommentTimestamp = eventTimestamp;
+          console.log("Comment author:", eventObj.user?.login);
         }
         if (isMomentRecent(eventObj.created_at, upperLimitCutoffTime) && !isMomentRecent(eventObj.created_at, needsUpdatingCutoffTime) && eventType === "commented" && isCommentByBot(eventObj)) {
           commentsToBeMinimized.push(eventObj.node_id);
         }
       }
-      let [lastActivityTimestamp, lastActivityType] = lastCommentTimestamp > lastAssignedTimestamp ? [lastCommentTimestamp, "Assignee's last comment"] : [lastAssignedTimestamp, "Assignee's assignment"];
-      lastActivityTimestamp = setLocalTime(lastActivityTimestamp);
+      const lastComment = lastCommentTimestamp ? new Date(lastCommentTimestamp) : null;
+      const lastAssigned = lastAssignedTimestamp ? new Date(lastAssignedTimestamp) : null;
+      let lastActivityTimestamp, lastActivityType;
+      if (!lastAssigned || lastComment && lastComment > lastAssigned) {
+        lastActivityTimestamp = lastCommentTimestamp;
+        lastActivityType = "Assignee's last comment";
+      } else {
+        lastActivityTimestamp = lastAssignedTimestamp;
+        lastActivityType = "Assignee's assignment";
+      }
+      const lastActivityTimestampISO = lastActivityTimestamp;
+      if (lastActivityTimestamp) {
+        lastActivityTimestamp = setLocalTime(lastActivityTimestamp);
+      }
       logger2.log(`Update status: ${lastActivityType} was at ${lastActivityTimestamp}`, 2);
-      if (isMomentRecent(lastActivityTimestamp, recentlyUpdatedCutoffTime)) {
+      if (isMomentRecent(lastActivityTimestampISO, recentlyUpdatedCutoffTime)) {
         logger2.log(`Decision: This is sooner than ${recentlyUpdatedByDays} days ago, retain '${statusUpdated}' label if exists`, 2);
         return { result: false, labels: statusUpdated, cutoff: recentlyUpdatedCutoffTime, commentsToBeMinimized };
       }
-      if (isMomentRecent(lastActivityTimestamp, needsUpdatingCutoffTime)) {
+      if (isMomentRecent(lastActivityTimestampISO, needsUpdatingCutoffTime)) {
         logger2.log(`Decision: This is between ${recentlyUpdatedByDays} and ${needsUpdatingByDays} days ago, no update-related labels`, 2);
         return { result: false, labels: "", cutoff: needsUpdatingCutoffTime, commentsToBeMinimized };
       }
-      if (isMomentRecent(lastActivityTimestamp, isInactiveCutoffTime)) {
+      if (isMomentRecent(lastActivityTimestampISO, isInactiveCutoffTime)) {
         logger2.log(`Decision: This is between ${needsUpdatingByDays} and ${isInactiveByDays} days ago, use '${statusInactive1}' label`, 2);
         return { result: true, labels: statusInactive1, cutoff: needsUpdatingCutoffTime, commentsToBeMinimized };
       }
