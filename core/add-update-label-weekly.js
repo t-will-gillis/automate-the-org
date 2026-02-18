@@ -169,6 +169,10 @@ async function isTimelineOutdated(timeline, issueNum, assignees) { // assignees 
   let lastCommentTimestamp = null;
   let commentsToBeMinimized = [];
 
+  console.log(`Issue #${issueNum} timeline has ${timeline.length} events`);
+  console.log(`Assignees for issue #${issueNum}: ${assignees.join(', ')}`);
+  console.log(`Cutoff times: recently updated (${recentlyUpdatedCutoffTime}), needs updating (${needsUpdatingCutoffTime}), is inactive (${isInactiveCutoffTime}), upper limit (${upperLimitCutoffTime})`);
+
   for (let i = timeline.length - 1; i >= 0; i--) {
     let eventObj = timeline[i];
     let eventType = eventObj.event;
@@ -189,8 +193,11 @@ async function isTimelineOutdated(timeline, issueNum, assignees) { // assignees 
       }
     }
 
-    let eventTimestamp = eventObj.updated_at || eventObj.created_at;
-
+    let eventTimestamp = eventObj.updated_at || eventObj.created_at; 
+    if (issueNum === 1273) {
+      console.log(`Event #${i} for issue #${issueNum}: type=${eventType}, timestamp=${eventTimestamp}`);
+    }
+   
     // Update for the most recent 'lastCommentTimestamp' or 'lastAssignedTimestamp' 
     if (!lastCommentTimestamp && eventType === 'commented' && isCommentByAssignees(eventObj, assignees)) {
       lastCommentTimestamp = eventTimestamp;
