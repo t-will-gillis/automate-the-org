@@ -28629,6 +28629,9 @@ var require_add_update_label_weekly = __commonJS({
       let lastAssignedTimestamp = null;
       let lastCommentTimestamp = null;
       let commentsToBeMinimized = [];
+      console.log(`Issue #${issueNum} timeline has ${timeline.length} events`);
+      console.log(`Assignees for issue #${issueNum}: ${assignees.join(", ")}`);
+      console.log(`Cutoff times: recently updated (${recentlyUpdatedCutoffTime}), needs updating (${needsUpdatingCutoffTime}), is inactive (${isInactiveCutoffTime}), upper limit (${upperLimitCutoffTime})`);
       for (let i = timeline.length - 1; i >= 0; i--) {
         let eventObj = timeline[i];
         let eventType = eventObj.event;
@@ -28644,6 +28647,9 @@ var require_add_update_label_weekly = __commonJS({
           }
         }
         let eventTimestamp = eventObj.updated_at || eventObj.created_at;
+        if (issueNum === 1273) {
+          console.log(`Event #${i} for issue #${issueNum}: type=${eventType}, timestamp=${eventTimestamp}`);
+        }
         if (!lastCommentTimestamp && eventType === "commented" && isCommentByAssignees(eventObj, assignees)) {
           lastCommentTimestamp = eventTimestamp;
         } else if (!lastAssignedTimestamp && eventType === "assigned" && isCommentByAssignees(eventObj, assignees)) {
@@ -28770,7 +28776,7 @@ var require_package = __commonJS({
   "package.json"(exports2, module2) {
     module2.exports = {
       name: "add-update-label-weekly",
-      version: "1.0.2",
+      version: "1.0.3",
       description: "Centralized GitHub Actions for repository maintenance and automation across the organization.",
       private: true,
       main: "dist/index.js",
