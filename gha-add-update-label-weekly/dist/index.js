@@ -28783,7 +28783,7 @@ var require_package = __commonJS({
   "package.json"(exports2, module2) {
     module2.exports = {
       name: "add-update-label-weekly",
-      version: "1.0.4",
+      version: "1.0.5",
       description: "Centralized GitHub Actions for repository maintenance and automation across the organization.",
       private: true,
       main: "dist/index.js",
