@@ -52,15 +52,7 @@ async function run() {
       configPath,
       defaults,
       overrides: { dryRun },
-      requiredFields: [
-        'timeframes.recentlyUpdatedByDays',
-        'timeframes.needsUpdatingByDays',
-        'timeframes.isInactiveByDays',
-        'timeframes.upperLimitDays',
-        'projectBoard.targetStatus',
-        'projectBoard.questionsStatus',
-        'commentTemplate',
-      ],
+      requiredFields: [],
     });
     logger.log(``);
 
@@ -109,6 +101,7 @@ function getDefaultConfigs() {
       recentlyUpdatedByDays: 3, // Issues updated within this many days are considered 'recentlyUpdated'
       needsUpdatingByDays: 7,   // Issues not updated for this many days are prompted as 'needsUpdating'
       isInactiveByDays: 14,     // Issues not updated for this many days are marked as 'isInactive'
+      unassignedByDays: 21,     // Issues not updated for this many days have assignee removed <- FUTURE FEATURE
       upperLimitDays: 35,       // Bot comments older than this are not checked (to reduce API calls)
     },
     
@@ -119,12 +112,7 @@ function getDefaultConfigs() {
     
     labels: {
       filtering: [
-        'draft',
-        'er',
-        'epic',
-        'dependency',
-        'complexity: prework'
-      ],
+     ],
     },
     
     bots: [
