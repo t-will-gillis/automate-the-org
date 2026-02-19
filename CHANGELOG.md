@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 _No unreleased changes yet._
 
+## v1.0.6
+2026-02-19
+- bug: resetting the GitHub's cache for the version
+
 ## v1.0.5
 2026-02-18
 - feat: minor edits, added FUTURE FEATURE value `unassignedByDays` 
