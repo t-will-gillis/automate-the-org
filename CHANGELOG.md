@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 _No unreleased changes yet._
 
+## v1.0.5
+2026-02-18
+- feat: revise required and default field values in `index.js`
+
 ## v1.0.4
 2026-02-18
 - bug: fix bug in `core/add-update-label-weekly.js` that was not returning a timeline when assignee was assigned by others
