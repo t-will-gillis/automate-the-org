@@ -84,7 +84,7 @@ if [[ $LAST_TAG =~ $VERSION_REGEX ]]; then
     fi
     
     # --- Push major tag to upstream ---
-    git push --delete upstream "$FLOATING_BRANCH" 2>/dev/null || echo "Tag didn't exist on upstream or couldn't be deleted"
+    git push upstream --delete "$FLOATING_BRANCH" 2>/dev/null || echo "Tag didn't exist on upstream or couldn't be deleted"
     git push upstream "refs/tags/$FLOATING_BRANCH"
 
     echo -e "\n✅ Version $FLOATING_BRANCH on upstream updated to $LAST_TAG!"
