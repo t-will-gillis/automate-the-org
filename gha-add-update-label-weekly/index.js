@@ -52,7 +52,15 @@ async function run() {
       configPath,
       defaults,
       overrides: { dryRun },
-      requiredFields: [],
+      requiredFields: [
+        'timeframes.recentlyUpdatedByDays',
+        'timeframes.needsUpdatingByDays',
+        'timeframes.isInactiveByDays',
+        'timeframes.upperLimitDays',
+        'projectBoard.targetStatus',
+        'projectBoard.questionsStatus',
+        'commentTemplate',
+      ],
     });
     logger.log(``);
 
