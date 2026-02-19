@@ -28864,7 +28864,15 @@ async function run() {
       configPath,
       defaults: defaults2,
       overrides: { dryRun },
-      requiredFields: []
+      requiredFields: [
+        "timeframes.recentlyUpdatedByDays",
+        "timeframes.needsUpdatingByDays",
+        "timeframes.isInactiveByDays",
+        "timeframes.upperLimitDays",
+        "projectBoard.targetStatus",
+        "projectBoard.questionsStatus",
+        "commentTemplate"
+      ]
     });
     logger.log(``);
     await checkIfLabelsInRepo(
