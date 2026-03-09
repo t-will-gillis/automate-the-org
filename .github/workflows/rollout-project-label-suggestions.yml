@@ -2,24 +2,19 @@ name: Rollout Project Label Suggestions
 
 on:
   workflow_call:
-  workflow_dispatch:
     inputs:
       target_repo:
-        description: 'Destination repo, e.g. "org/project":'
         required: true
-        default: 'hackforla/'
+        type: string
       source_repo:
-        description: 'Source repo, e.g. "org/central-repo":'
         required: true
-        default: 'hackforla/automate-the-org'
-      github_app_name:
-        description: 'GitHub App name/slug:'
+        type: string
+      template_file:
         required: true
-        default: 'hfla-workflow-rollout'
-      dry_run:
-        description: 'Dry-run mode: preview changes only'
-        type: boolean
-        default: true
+        type: string
+      rollout_branch:
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -32,7 +27,7 @@ jobs:
     steps:
       - name: Validate target_repo format
         run: |
-          if [[ "${{ github.event.inputs.target_repo }}" != */* ]]; then
+          if [[ "${{ inputs.target_repo }}" != */* ]]; then
             echo "::error title=Invalid destination repo format::Destination repo must be in the format 'org/repo-name'"
             exit 1
           fi
@@ -40,7 +35,7 @@ jobs:
       - name: Checkout source repo
         uses: actions/checkout@v6
         with:
-          repository: ${{ github.event.inputs.source_repo }}
+          repository: ${{ inputs.source_repo }}
           path: central
 
       - name: Generate token from GitHub App
@@ -53,7 +48,7 @@ jobs:
           trap 'rm -f key.pem' EXIT
           
           # Generate JWT for GitHub App authentication
-          printf "%s" "${{ secrets.HFLA_WORKFLOW_APP_PRIVATE_KEY }}" > key.pem
+          printf "%s" "${{ secrets.HFLA_GRAPHQL_APP_PRIVATE_KEY }}" > key.pem
           chmod 600 key.pem
 
           # Ensure key is written correctly
@@ -67,7 +62,7 @@ jobs:
           EXP=$((NOW + 600))
           
           HEADER='{"alg":"RS256","typ":"JWT"}'
-          PAYLOAD="{\"iat\":${IAT},\"exp\":${EXP},\"iss\":\"${{ secrets.HFLA_WORKFLOW_APP_ID }}\"}"
+          PAYLOAD="{\"iat\":${IAT},\"exp\":${EXP},\"iss\":\"${{ secrets.HFLA_GRAPHQL_APP_ID }}\"}"
           
           encode_url() {
             openssl base64 -e | tr '+/' '-_' | tr -d '=\n\r'
@@ -84,11 +79,14 @@ jobs:
           JWT="${HEADER_B64}.${PAYLOAD_B64}.${SIGNATURE}"
           echo "::add-mask::$JWT"
 
+          # Extract org from target_repo input
+          TARGET_ORG=$(echo "${{ inputs.target_repo }}" | cut -d'/' -f1)
+
           # Retrieve installation ID
           INSTALLATION_ID=$(curl -s \
             -H "Authorization: Bearer ${JWT}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/orgs/hackforla/installation" \
+            "https://api.github.com/orgs/${TARGET_ORG}/installation" \
             | jq -r '.id')
           
           if [[ -z "$INSTALLATION_ID" || "$INSTALLATION_ID" == "null" ]]; then
@@ -99,7 +97,7 @@ jobs:
           echo "Installation ID: $INSTALLATION_ID"
 
           # Extract project name from full path
-          PROJECT_NAME=$(echo "${{ github.event.inputs.target_repo }}" | cut -d'/' -f2)
+          PROJECT_NAME=$(echo "${{ inputs.target_repo }}" | cut -d'/' -f2)
           
           # Exchange JWT for installation access token with explicit permissions
           TOKEN_RESPONSE=$(curl -s -X POST \
@@ -110,7 +108,7 @@ jobs:
             -d '{
             "repositories": ["'"${PROJECT_NAME}"'"],
             "permissions": {
-              "contents": "read",
+              "contents": "write",
               "pull_requests": "write"
             }
           }')
@@ -135,47 +133,221 @@ jobs:
       - name: Checkout destination repo
         uses: actions/checkout@v6
         with:
-          repository: ${{ github.event.inputs.target_repo }}
+          repository: ${{ inputs.target_repo }}
           path: target
           token: ${{ steps.generate-app-token.outputs.token }}
 
       - name: Export workflow inputs to environment
         run: |
-          TARGET_REPO="${{ github.event.inputs.target_repo }}"
-          SOURCE_REPO="${{ github.event.inputs.source_repo }}"
-          DRY_RUN="${{ github.event.inputs.dry_run }}"
+          TARGET_REPO="${{ inputs.target_repo }}"
+          SOURCE_REPO="${{ inputs.source_repo }}"
+          TEMPLATE_FILE="${{ inputs.template_file }}"
+          ROLLOUT_BRANCH="${{ inputs.rollout_branch }}"
           PROJECT_NAME=$(echo "${TARGET_REPO}" | cut -d'/' -f2)
           ORG_NAME=$(echo "$SOURCE_REPO" | cut -d'/' -f1)
-          
+
           echo "TARGET_REPO=${TARGET_REPO}" >> $GITHUB_ENV
           echo "SOURCE_REPO=${SOURCE_REPO}" >> $GITHUB_ENV
-          echo "DRY_RUN=${DRY_RUN}" >> $GITHUB_ENV
+          echo "TEMPLATE_FILE=${TEMPLATE_FILE}" >> $GITHUB_ENV
+          echo "ROLLOUT_BRANCH=${ROLLOUT_BRANCH}" >> $GITHUB_ENV
           echo "PROJECT_NAME=${PROJECT_NAME}" >> $GITHUB_ENV
           echo "ORG_NAME=${ORG_NAME}" >> $GITHUB_ENV
+
+      - name: Extract identifiers from workflow config
+        id: extract-config
+        run: |
+          set -e
+
+          # Derive config filename: "Add Update Label Weekly" -> "add-update-label-weekly-config.example.yml"
+          CONFIG_FILENAME=$(echo "$TEMPLATE_FILE" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+          CONFIG_PATH="central/example-configs/${CONFIG_FILENAME}-config.example.yml"
+
+          if [[ ! -f "$CONFIG_PATH" ]]; then
+            echo "::error title=Config file not found::Config file not found at $CONFIG_PATH"
+            exit 1
+          fi
+
+          echo "Reading config from $CONFIG_PATH..."
+
+          # Extract required labels as {key: value} object to preserve config key names
+          REQUIRED_LABELS=$(yq -o=json '.labels.required' "$CONFIG_PATH" | jq -c .)
+
+          # Extract filtering labels array (no keys — values only)
+          FILTERING_LABELS=$(yq -o=json '.labels.filtering // []' "$CONFIG_PATH" | jq -c .)
+
+          # Extract modifying labels array (optional field, no keys)
+          MODIFYING_LABELS=$(yq -o=json '.labels.skills_issue // []' "$CONFIG_PATH" | jq -c .)
+
+          # Extract project board status cols as {key: value} object to preserve config key names
+          CONFIG_STATUS_COLS=$(yq -o=json '.projectBoard' "$CONFIG_PATH" | jq -c .)
+
+          echo "Required labels:      $REQUIRED_LABELS"
+          echo "Filtering labels:     $FILTERING_LABELS"
+          echo "Modifying labels:     $MODIFYING_LABELS"
+          echo "Config status cols:   $CONFIG_STATUS_COLS"
+
+          echo "REQUIRED_LABELS=$REQUIRED_LABELS" >> $GITHUB_ENV
+          echo "FILTERING_LABELS=$FILTERING_LABELS" >> $GITHUB_ENV
+          echo "MODIFYING_LABELS=$MODIFYING_LABELS" >> $GITHUB_ENV
+          echo "CONFIG_STATUS_COLS=$CONFIG_STATUS_COLS" >> $GITHUB_ENV
 
       - name: Retrieve all labels from destination repo
         id: retrieve-labels
         env:
           GITHUB_TOKEN: ${{ steps.generate-app-token.outputs.token }}
         run: |
+          set -e
           echo "Retrieving labels from '$TARGET_REPO'..."
 
           # Fetch all labels into one JSON array
           gh api --paginate "repos/$TARGET_REPO/labels?per_page=100" \
             -H "Accept: application/vnd.github+json" > all_labels.json
-          
-          # Create initial list {name}
-          jq '[.[].name]' all_labels.json > repoLabels.json
+
+          # Create compact list of label names
+          jq -c '[.[].name]' all_labels.json > repoLabels.json
 
           echo "Retrieved labels:"
           cat repoLabels.json
 
-          echo "REPO_LABELS=$(cat repoLabels.json | jq -c .)" >> $GITHUB_ENV
-        
-      - name: Find similar labels
-        id: find-similar
+          echo "REPO_LABELS=$(jq -c . repoLabels.json)" >> $GITHUB_ENV
+
+      - name: Retrieve Project V2 status column names from destination repo
+        id: retrieve-project-status
+        env:
+          GITHUB_TOKEN: ${{ steps.generate-app-token.outputs.token }}
+        run: |
+          set -e
+          echo "Retrieving Project V2 status column names from '$TARGET_REPO'..."
+
+          gh api graphql -f query='
+            query($owner: String!, $repo: String!) {
+              repository(owner: $owner, name: $repo) {
+                projectsV2(first: 20) {
+                  nodes {
+                    title
+                    fields(first: 20) {
+                      nodes {
+                        ... on ProjectV2SingleSelectField {
+                          name
+                          options {
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ' -f owner="$ORG_NAME" -f repo="$PROJECT_NAME" > project_fields.json
+
+          # Fail fast if GraphQL returned errors
+          if jq -e '.errors' project_fields.json > /dev/null 2>&1; then
+            echo "::error title=GraphQL error::Project V2 query returned errors"
+            jq '.errors' project_fields.json
+            exit 1
+          fi
+
+          # Extract all option names from fields named "Status" across all projects, compacted
+          PROJ_STATUS_COLS=$(jq -c '[
+            .data.repository.projectsV2.nodes[].fields.nodes[]
+            | select(.name == "Status")
+            | .options[].name
+          ] | unique' project_fields.json)
+
+          echo "Retrieved status columns:"
+          echo "$PROJ_STATUS_COLS"
+
+          echo "PROJ_STATUS_COLS=$PROJ_STATUS_COLS" >> $GITHUB_ENV
+
+      - name: Switch to rollout branch in destination repo
+        id: switch-branch
+        run: |
+          set -e
+          cd target
+          if git ls-remote --exit-code --heads origin "$ROLLOUT_BRANCH" > /dev/null 2>&1; then
+            git fetch origin "$ROLLOUT_BRANCH"
+            git checkout "$ROLLOUT_BRANCH"
+            echo "rollout_branch_exists=true" >> $GITHUB_OUTPUT
+            echo "Checked out rollout branch: $ROLLOUT_BRANCH"
+          else
+            echo "rollout_branch_exists=false" >> $GITHUB_OUTPUT
+            echo "Rollout branch '$ROLLOUT_BRANCH' not found (likely dry run). Suggestions will be logged only."
+          fi
+
+      - name: Find similar identifiers
+        id: find-similar-identifiers
         env:
           REPO_LABELS: ${{ env.REPO_LABELS }}
+          PROJ_STATUS_COLS: ${{ env.PROJ_STATUS_COLS }}
+          REQUIRED_LABELS: ${{ env.REQUIRED_LABELS }}
+          FILTERING_LABELS: ${{ env.FILTERING_LABELS }}
+          MODIFYING_LABELS: ${{ env.MODIFYING_LABELS }}
+          CONFIG_STATUS_COLS: ${{ env.CONFIG_STATUS_COLS }}
+          TEMPLATE_FILE: ${{ env.TEMPLATE_FILE }}
         run: |
-          node central/.github/workflow-helpers/find-similar-labels.js
+          node central/.github/workflow-helpers/find-similar-identifiers.js
+
+      - name: Apply suggestions to config file
+        id: apply-suggestions
+        if: steps.switch-branch.outputs.rollout_branch_exists == 'true'
+        run: |
+          set -e
+
+          # Derive installed config path from template name
+          CONFIG_FILENAME=$(echo "$TEMPLATE_FILE" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+          CONFIG_FILE="target/github-actions/workflow-configs/${CONFIG_FILENAME}-config.yml"
+
+          if [[ ! -f "$CONFIG_FILE" ]]; then
+            echo "::warning title=Config file not found::Expected config at $CONFIG_FILE — skipping pre-fill"
+            exit 0
+          fi
+
+          echo "Applying best-match suggestions to $CONFIG_FILE..."
+
+          # Apply required label suggestions
+          jq -r '.required | to_entries[] | select(.value.suggestions | length > 0) | "\(.key)\t\(.value.suggestions[0])"' suggestions.json | \
+          while IFS=$'\t' read -r key suggestion; do
+            echo "  labels.required.$key -> $suggestion"
+            VALUE="$suggestion" yq e ".labels.required.${key} = env(VALUE)" -i "$CONFIG_FILE"
+          done
+
+          # Apply status column suggestions
+          jq -r '(.statusCols // {}) | to_entries[] | select(.value.suggestions | length > 0) | "\(.key)\t\(.value.suggestions[0])"' suggestions.json | \
+          while IFS=$'\t' read -r key suggestion; do
+            echo "  projectBoard.$key -> $suggestion"
+            VALUE="$suggestion" yq e ".projectBoard.${key} = env(VALUE)" -i "$CONFIG_FILE"
+          done
+
+      - name: Commit and push updated config
+        id: commit-config
+        if: steps.switch-branch.outputs.rollout_branch_exists == 'true'
+        run: |
+          set -e
+          cd target
+
+          CONFIG_FILENAME=$(echo "$TEMPLATE_FILE" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+          CONFIG_FILE="github-actions/workflow-configs/${CONFIG_FILENAME}-config.yml"
+
+          git config user.name "hfla-graphql-app[bot]"
+          git config user.email "hfla-graphql-app@users.noreply.github.com"
+
+          git add "$CONFIG_FILE"
+          if git diff --staged --quiet; then
+            echo "No suggestions applied — config unchanged."
+          else
+            git commit -m "Pre-fill config with best-match label suggestions"
+            git push origin "$ROLLOUT_BRANCH"
+            echo "Pushed updated config to $ROLLOUT_BRANCH"
+          fi
+
+      - name: Post suggestions as PR comment
+        id: post-pr-comment
+        if: steps.switch-branch.outputs.rollout_branch_exists == 'true'
+        env:
+          GITHUB_TOKEN: ${{ steps.generate-app-token.outputs.token }}
+        run: |
+          gh pr comment "$ROLLOUT_BRANCH" \
+            --repo "$TARGET_REPO" \
+            --body-file pr-comment.md
 
