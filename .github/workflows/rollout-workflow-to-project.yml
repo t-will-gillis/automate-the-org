@@ -32,10 +32,6 @@ on:
         type: boolean
         default: true
 
-permissions:
-  contents: write
-  pull-requests: write
-  
 jobs:
   Rollout-Workflow:
     runs-on: ubuntu-latest
@@ -118,7 +114,8 @@ jobs:
             "repositories": ["'"${PROJECT_NAME}"'"],
             "permissions": {
               "contents": "write",
-              "pull_requests": "write"
+              "pull_requests": "write",
+              "workflows": "write"
             }
           }')
           

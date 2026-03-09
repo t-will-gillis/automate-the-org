@@ -15,10 +15,16 @@ const SYNONYMS = {
 /**
  * Find similar identifiers based on normalized string similarity, substring
  * matches, and taxonomy-aware boosts. Works for both labels and status columns.
+ *
+ * Returns:
+ *   prefill    — top match only if it is an exact match after normalization
+ *                (i.e. differs from needle only in case or punctuation); else null
+ *   suggestions — all matches above SIMILARITY_THRESHOLD, sorted by relevance
+ *
  * @param {string} needle      - Identifier to match (e.g. "status: updated")
  * @param {string[]} haystack  - Pool of existing identifiers to search
  * @param {number} limit       - Max number of suggestions to return
- * @returns {string[]}         - Matching identifiers sorted by relevance
+ * @returns {{ prefill: string|null, suggestions: string[] }}
  */
 function findSimilarIdentifiers(needle, haystack, limit = MAX_SUGGESTIONS) {
   const needleNorm = normalize(needle);
@@ -62,11 +68,19 @@ function findSimilarIdentifiers(needle, haystack, limit = MAX_SUGGESTIONS) {
     return { id: entry.id, score };
   });
 
-  return scored
+  const suggestions = scored
     .filter(x => x.score > SIMILARITY_THRESHOLD)
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
     .map(x => x.id);
+
+  // Pre-fill only when the top match is exact after normalization
+  // (differs from needle only in case or punctuation — no fuzzy tolerance)
+  const prefill = (suggestions[0] && normalize(suggestions[0]) === needleNorm)
+    ? suggestions[0]
+    : null;
+
+  return { prefill, suggestions };
 }
 
 // **************************************************************************
@@ -137,37 +151,33 @@ const repoLabels     = JSON.parse(process.env.REPO_LABELS);
 const projStatusCols = JSON.parse(process.env.PROJ_STATUS_COLS || "[]");
 
 // Match required labels against repo labels
-// Result: { configKey: { configValue, suggestions } }
+// Result: { configKey: { configValue, prefill, suggestions } }
 const requiredSuggestions = {};
 Object.entries(required).forEach(([key, value]) => {
-  requiredSuggestions[key] = {
-    configValue: value,
-    suggestions: findSimilarIdentifiers(value, repoLabels),
-  };
+  const { prefill, suggestions } = findSimilarIdentifiers(value, repoLabels);
+  requiredSuggestions[key] = { configValue: value, prefill, suggestions };
 });
 
 // Match filtering labels against repo labels
-// Result: { defaultValue: suggestions[] }
+// Result: { defaultValue: { prefill, suggestions } }
 const filteringSuggestions = {};
 filtering.forEach(label => {
   filteringSuggestions[label] = findSimilarIdentifiers(label, repoLabels);
 });
 
 // Match modifying labels against repo labels (optional — may be empty)
-// Result: { defaultValue: suggestions[] }
+// Result: { defaultValue: { prefill, suggestions } }
 const modifyingSuggestions = {};
 modifying.forEach(label => {
   modifyingSuggestions[label] = findSimilarIdentifiers(label, repoLabels);
 });
 
 // Match config status columns against the repo's actual project board columns
-// Result: { configKey: { configValue, suggestions } }
+// Result: { configKey: { configValue, prefill, suggestions } }
 const statusColSuggestions = {};
 Object.entries(statusCols).forEach(([key, value]) => {
-  statusColSuggestions[key] = {
-    configValue: value,
-    suggestions: findSimilarIdentifiers(value, projStatusCols),
-  };
+  const { prefill, suggestions } = findSimilarIdentifiers(value, projStatusCols);
+  statusColSuggestions[key] = { configValue: value, prefill, suggestions };
 });
 
 // **************************************************************************
@@ -190,52 +200,58 @@ const md = [];
 
 md.push('## Label & Project Board Suggestions');
 md.push('');
-md.push(`The following suggestions were generated for the **${templateFile}** workflow.`);
-md.push('The config file has been pre-filled with the best match for each identifier.');
-md.push('Please review and update if needed before approving this PR.');
+md.push(`The following tables list labels and other values used by the workflow. The "Default value" is the from the default`);
+md.push(`configuration file. The "Suggested value" column lists the closest match found in your repo, along with other close `);
+md.push(`matches in the "Other suggestions" column. These suggestions are meant to help you fill in the config file with `);
+md.push(`identifiers that already exist in your repo. Where possible, the config file attached to this PR has been pre-filled`);
+md.push(`with the closest match for each identifier.`);
+md.push(``);
+md.push(`Please review the "Suggested value" and **_update the config file_** attached before approving this PR.`);;
 md.push('');
 
-md.push('### Required labels');
+md.push('### Required label(s)');
 md.push('');
-md.push('| Config key | Default value | Pre-filled with | Other suggestions |');
+md.push('| Placeholder | Default value | Suggested value | Other suggestions |');
 md.push('|---|---|---|---|');
-Object.entries(requiredSuggestions).forEach(([key, { configValue, suggestions }]) => {
-  const best   = suggestions[0] ? `\`${suggestions[0]}\`` : '_no match — default kept_';
-  const others = suggestions.slice(1).map(s => `\`${s}\``).join(', ') || '—';
+Object.entries(requiredSuggestions).forEach(([key, { configValue, prefill, suggestions }]) => {
+  const best   = prefill ? `\`${prefill}\`` : '_no match — default kept_';
+  const others = suggestions.filter(s => s !== prefill).map(s => `\`${s}\``).join(', ') || '—';
   md.push(`| \`${key}\` | \`${configValue}\` | ${best} | ${others} |`);
 });
 md.push('');
 
-md.push('### Filtering labels');
+md.push('### Filtering label(s)');
 md.push('');
-md.push('| Default value | Suggestions |');
-md.push('|---|---|');
-Object.entries(filteringSuggestions).forEach(([label, suggestions]) => {
-  const matches = suggestions.length > 0 ? suggestions.map(s => `\`${s}\``).join(', ') : '_no match_';
-  md.push(`| \`${label}\` | ${matches} |`);
+md.push('| Placeholder | Default value | Suggested value | Other suggestions |');
+md.push('|---|---|---|---|');
+Object.entries(filteringSuggestions).forEach(([label, { prefill, suggestions }]) => {
+  const best   = prefill ? `\`${prefill}\`` : '_no match — default kept_';
+  const others = suggestions.filter(s => s !== prefill).map(s => `\`${s}\``).join(', ') || '—';
+  md.push(`| - | \`${label}\` | ${best} | ${others} |`);
 });
 md.push('');
 
 if (modifying.length > 0) {
-  md.push('### Modifying labels');
+  md.push('### Modifying label(s)');
   md.push('');
-  md.push('| Default value | Suggestions |');
-  md.push('|---|---|');
-  Object.entries(modifyingSuggestions).forEach(([label, suggestions]) => {
-    const matches = suggestions.length > 0 ? suggestions.map(s => `\`${s}\``).join(', ') : '_no match_';
-    md.push(`| \`${label}\` | ${matches} |`);
+  md.push('| Placeholder | Default value | Suggested value | Other suggestions |');
+  md.push('|---|---|---|---|');
+  Object.entries(modifyingSuggestions).forEach(([label, { prefill, suggestions }]) => {
+    const best   = prefill ? `\`${prefill}\`` : '_no match — default kept_';
+    const others = suggestions.filter(s => s !== prefill).map(s => `\`${s}\``).join(', ') || '—';
+    md.push(`| - | \`${label}\` | ${best} | ${others} |`);
   });
   md.push('');
 }
 
 if (Object.keys(statusCols).length > 0) {
-  md.push('### Project board status columns');
+  md.push('### Project Board status-columns');
   md.push('');
-  md.push('| Config key | Default value | Pre-filled with | Other suggestions |');
+  md.push('| Placeholder | Default value | Suggested value | Other suggestions |');
   md.push('|---|---|---|---|');
-  Object.entries(statusColSuggestions).forEach(([key, { configValue, suggestions }]) => {
-    const best   = suggestions[0] ? `\`${suggestions[0]}\`` : '_no match — default kept_';
-    const others = suggestions.slice(1).map(s => `\`${s}\``).join(', ') || '—';
+  Object.entries(statusColSuggestions).forEach(([key, { configValue, prefill, suggestions }]) => {
+    const best   = prefill ? `\`${prefill}\`` : '_no match — default kept_';
+    const others = suggestions.filter(s => s !== prefill).map(s => `\`${s}\``).join(', ') || '—';
     md.push(`| \`${key}\` | \`${configValue}\` | ${best} | ${others} |`);
   });
   md.push('');

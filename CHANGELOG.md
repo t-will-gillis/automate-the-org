@@ -8,14 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
-- feat: `rollout-project-label-suggestions.yml` refactor — converted from `workflow_dispatch` to `workflow_call` only; now triggered as a second job (`Label-Suggestions`) from `rollout-workflow-to-project.yml` via `needs:` + `secrets: inherit`
-- feat: `rollout-project-label-suggestions.yml` — add step to extract `required`, `filtering`, `skills_issue`, and `projectBoard` identifiers from `add-update-label-weekly-config.example.yml` and pass as env vars to `find-similar-identifiers.js`
-- feat: `rollout-project-label-suggestions.yml` — add GraphQL step to retrieve Project V2 status-column names from destination repo
-- feat: `rollout-project-label-suggestions.yml` — add step to pre-fill installed config file with best-match suggestions using `yq env(VALUE)`, then commit and push to rollout branch
-- feat: `rollout-project-label-suggestions.yml` — add step to post PR comment with markdown suggestion tables (required labels, filtering labels, modifying labels, project board status columns)
-- feat: `rollout-workflow-to-project.yml` — add `Label-Suggestions` job calling `rollout-project-label-suggestions.yml` after PR creation
-- refactor: `rollout-workflow-to-project.yml` — replace hardcoded `hackforla` org in installation URL with `TARGET_ORG` derived from `target_repo` input
-- feat: rename `find-similar-labels.js` → `find-similar-identifiers.js`; refactor to read all inputs from env vars, match both labels and project board status columns, write `suggestions.json` and `pr-comment.md`
+- feat: edit rollout workflows so rollout labels is triggered by workflow call 
+- feat: `rollout-project-label-suggestions.yml` convert to workflow_call;
+  add steps to extract config identifiers, retrieve Project V2 status cols via
+  GraphQL, pre-fill installed config with best-match suggestions,
+  commit/push updated config, and post PR comment with suggestion tables
+- feat: `rollout-workflow-to-project.yml`: add Label-Suggestions job; replace
+  hardcoded org; add suggestions to PR as comment; edit config file in PR for
+  best match suggestions 
+- feat: `find-similar-identifiers.js` refactor to read all inputs from env 
+  and match both labels and project board status columns, and write 
+  `suggestions.json` and `pr-comment.md`, and automatically writes close matches
+  to `add-update-label-weekly-config.yml`
+
 
 ## v1.0.6
 2026-02-19
