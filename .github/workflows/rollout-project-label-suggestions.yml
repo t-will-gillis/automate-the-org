@@ -346,27 +346,27 @@ jobs:
               -i "$CONFIG_FILE"
           done
 
-      - name: Commit and push updated config
-        id: commit-config
-        if: steps.switch-branch.outputs.rollout_branch_exists == 'true'
-        run: |
-          set -e
-          cd target
+      # - name: Commit and push updated config
+      #   id: commit-config
+      #   if: steps.switch-branch.outputs.rollout_branch_exists == 'true'
+      #   run: |
+      #     set -e
+      #     cd target
 
-          CONFIG_FILENAME=$(echo "$TEMPLATE_FILE" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
-          CONFIG_FILE="github-actions/workflow-configs/${CONFIG_FILENAME}-config.yml"
+      #     CONFIG_FILENAME=$(echo "$TEMPLATE_FILE" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+      #     CONFIG_FILE="github-actions/workflow-configs/${CONFIG_FILENAME}-config.yml"
 
-          git config user.name "hfla-graphql-app[bot]"
-          git config user.email "hfla-graphql-app@users.noreply.github.com"
+      #     git config user.name "hfla-graphql-app[bot]"
+      #     git config user.email "hfla-graphql-app@users.noreply.github.com"
 
-          git add "$CONFIG_FILE"
-          if git diff --staged --quiet; then
-            echo "No suggestions applied — config unchanged."
-          else
-            git commit -m "Pre-fill config with best-match label suggestions"
-            git push origin "$ROLLOUT_BRANCH"
-            echo "Pushed updated config to $ROLLOUT_BRANCH"
-          fi
+      #     git add "$CONFIG_FILE"
+      #     if git diff --staged --quiet; then
+      #       echo "No suggestions applied — config unchanged."
+      #     else
+      #       git commit -m "Pre-fill config with best-match label suggestions"
+      #       git push origin "$ROLLOUT_BRANCH"
+      #       echo "Pushed updated config to $ROLLOUT_BRANCH"
+      #     fi
 
       - name: Post suggestions as PR comment
         id: post-pr-comment
