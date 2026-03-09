@@ -208,22 +208,24 @@ md.push('');
 
 md.push('### Filtering labels');
 md.push('');
-md.push('| Default value | Suggestions |');
-md.push('|---|---|');
+md.push('| Default value | Pre-filled with | Other suggestions |');
+md.push('|---|---|---|');
 Object.entries(filteringSuggestions).forEach(([label, suggestions]) => {
-  const matches = suggestions.length > 0 ? suggestions.map(s => `\`${s}\``).join(', ') : '_no match_';
-  md.push(`| \`${label}\` | ${matches} |`);
+  const best   = suggestions[0] ? `\`${suggestions[0]}\`` : '_no match — default kept_';
+  const others = suggestions.slice(1).map(s => `\`${s}\``).join(', ') || '—';
+  md.push(`| \`${label}\` | ${best} | ${others} |`);
 });
 md.push('');
 
 if (modifying.length > 0) {
   md.push('### Modifying labels');
   md.push('');
-  md.push('| Default value | Suggestions |');
-  md.push('|---|---|');
+  md.push('| Default value | Pre-filled with | Other suggestions |');
+  md.push('|---|---|---|');
   Object.entries(modifyingSuggestions).forEach(([label, suggestions]) => {
-    const matches = suggestions.length > 0 ? suggestions.map(s => `\`${s}\``).join(', ') : '_no match_';
-    md.push(`| \`${label}\` | ${matches} |`);
+    const best   = suggestions[0] ? `\`${suggestions[0]}\`` : '_no match — default kept_';
+    const others = suggestions.slice(1).map(s => `\`${s}\``).join(', ') || '—';
+    md.push(`| \`${label}\` | ${best} | ${others} |`);
   });
   md.push('');
 }
