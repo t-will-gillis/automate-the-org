@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ## [Unreleased]
+_No unreleased changes yet._
+
+## v1.0.7
+2026-03-09
 - feat: edit rollout workflows so rollout labels is triggered by workflow call 
 - feat: `rollout-project-label-suggestions.yml` convert to workflow_call;
   add steps to extract config identifiers, retrieve Project V2 status cols via
