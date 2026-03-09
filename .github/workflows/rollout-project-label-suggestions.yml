@@ -82,7 +82,7 @@ jobs:
           INSTALLATION_ID=$(curl -s \
             -H "Authorization: Bearer ${JWT}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/orgs/${TARGET_ORG}/installation" \
+            "https://api.github.com/users/${TARGET_ORG}/installation" \
             | jq -r '.id')
           
           if [[ -z "$INSTALLATION_ID" || "$INSTALLATION_ID" == "null" ]]; then
