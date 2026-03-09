@@ -119,7 +119,8 @@ jobs:
             "repositories": ["'"${PROJECT_NAME}"'"],
             "permissions": {
               "contents": "write",
-              "pull_requests": "write"
+              "pull_requests": "write",
+              "workflows": "write"
             }
           }')
           
