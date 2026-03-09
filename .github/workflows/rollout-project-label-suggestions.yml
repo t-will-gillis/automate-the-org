@@ -16,10 +16,6 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: write
-  pull-requests: write
-
 jobs:
   Rollout-Label-Directory:
     runs-on: ubuntu-latest
@@ -86,7 +82,7 @@ jobs:
           INSTALLATION_ID=$(curl -s \
             -H "Authorization: Bearer ${JWT}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/users/${TARGET_ORG}/installation" \
+            "https://api.github.com/orgs/${TARGET_ORG}/installation" \
             | jq -r '.id')
           
           if [[ -z "$INSTALLATION_ID" || "$INSTALLATION_ID" == "null" ]]; then
@@ -109,7 +105,8 @@ jobs:
             "repositories": ["'"${PROJECT_NAME}"'"],
             "permissions": {
               "contents": "write",
-              "pull_requests": "write"
+              "pull_requests": "write",
+              "workflows": "write"
             }
           }')
           
@@ -307,24 +304,18 @@ jobs:
 
           echo "Applying best-match suggestions to $CONFIG_FILE..."
 
-          # Apply required label suggestions
-          jq -r '.required | to_entries[] | select(.value.suggestions | length > 0) | "\(.key)\t\(.value.suggestions[0])"' suggestions.json | \
+          # Apply required label suggestions (object keys — use env(YQ_KEY) to avoid shell interpolation in path)
+          jq -r '.required | to_entries[] | select(.value.prefill != null) | "\(.key)\t\(.value.prefill)"' suggestions.json | \
           while IFS=$'\t' read -r key suggestion; do
             echo "  labels.required.$key -> $suggestion"
-            VALUE="$suggestion" yq e ".labels.required.${key} = env(VALUE)" -i "$CONFIG_FILE"
-            yq e "(.labels.required.${key} | style) = \"double\"" -i "$CONFIG_FILE"
-          done
-          
-          # Apply status column suggestions
-          jq -r '(.statusCols // {}) | to_entries[] | select(.value.suggestions | length > 0) | "\(.key)\t\(.value.suggestions[0])"' suggestions.json | \
-          while IFS=$'\t' read -r key suggestion; do
-            echo "  projectBoard.$key -> $suggestion"
-            VALUE="$suggestion" yq e ".projectBoard.${key} = env(VALUE)" -i "$CONFIG_FILE"
-            yq e "(.projectBoard.${key} | style) = \"double\"" -i "$CONFIG_FILE"
+            export YQ_KEY="$key"
+            VALUE="$suggestion" yq e \
+              '.labels.required[env(YQ_KEY)] = env(VALUE) | (.labels.required[env(YQ_KEY)] | style) = "double"' \
+              -i "$CONFIG_FILE"
           done
 
           # Apply filtering label suggestions (array — match by value)
-          jq -r '.filtering | to_entries[] | select(.value | length > 0) | "\(.key)\t\(.value[0])"' suggestions.json | \
+          jq -r '.filtering | to_entries[] | select(.value.prefill != null) | "\(.key)\t\(.value.prefill)"' suggestions.json | \
           while IFS=$'\t' read -r old_val new_val; do
             echo "  labels.filtering: $old_val -> $new_val"
             OLD="$old_val" NEW="$new_val" yq e \
@@ -332,10 +323,10 @@ jobs:
             NEW="$new_val" yq e \
               '(.labels.filtering[] | select(. == env(NEW)) | style) = "double"' -i "$CONFIG_FILE"
           done
-          
+
           # Apply modifying (skills_issue) label suggestions (array — match by value)
           if jq -e '.modifying' suggestions.json > /dev/null 2>&1; then
-            jq -r '.modifying | to_entries[] | select(.value | length > 0) | "\(.key)\t\(.value[0])"' suggestions.json | \
+            jq -r '.modifying | to_entries[] | select(.value.prefill != null) | "\(.key)\t\(.value.prefill)"' suggestions.json | \
             while IFS=$'\t' read -r old_val new_val; do
               echo "  labels.skills_issue: $old_val -> $new_val"
               OLD="$old_val" NEW="$new_val" yq e \
@@ -344,6 +335,16 @@ jobs:
                 '(.labels.skills_issue[] | select(. == env(NEW)) | style) = "double"' -i "$CONFIG_FILE"
             done
           fi
+
+          # Apply status column suggestions (object keys — use env(YQ_KEY))
+          jq -r '(.statusCols // {}) | to_entries[] | select(.value.prefill != null) | "\(.key)\t\(.value.prefill)"' suggestions.json | \
+          while IFS=$'\t' read -r key suggestion; do
+            echo "  projectBoard.$key -> $suggestion"
+            export YQ_KEY="$key"
+            VALUE="$suggestion" yq e \
+              '.projectBoard[env(YQ_KEY)] = env(VALUE) | (.projectBoard[env(YQ_KEY)] | style) = "double"' \
+              -i "$CONFIG_FILE"
+          done
 
       - name: Commit and push updated config
         id: commit-config
@@ -376,4 +377,3 @@ jobs:
           gh pr comment "$ROLLOUT_BRANCH" \
             --repo "$TARGET_REPO" \
             --body-file pr-comment.md
-
