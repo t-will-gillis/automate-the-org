@@ -204,8 +204,9 @@ md.push(`The following tables list labels and other values used by the workflow.
 md.push(`configuration file. The "Suggested value" column lists the closest match found in your repo, along with other close `);
 md.push(`matches in the "Other suggestions" column. These suggestions are meant to help you fill in the config file with `);
 md.push(`identifiers that already exist in your repo. Where possible, the config file attached to this PR has been pre-filled`);
-md.push(`with the closest match for each identifier. Please review the "Suggested value" and **update the config file** attached`);
-md.push(`before approving this PR.`);
+md.push(`with the closest match for each identifier.`);
+md.push(``);
+md.push(`   Please review the "Suggested value" and **update the config file** attached before approving this PR.`);;
 md.push('');
 
 md.push('### Required label(s)');
