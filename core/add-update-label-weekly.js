@@ -21,11 +21,13 @@ var statusHelpWanted;
 var recentlyUpdatedByDays;
 var needsUpdatingByDays;
 var isInactiveByDays;
+// var unassignedByDays; // <-- FUTURE FEATURE
 var upperLimitDays;
 
 var recentlyUpdatedCutoffTime;
 var needsUpdatingCutoffTime;
 var isInactiveCutoffTime;
+// var unassignedCutoffTime; // <-- FUTURE FEATURE
 var upperLimitCutoffTime;
 
 

@@ -88,11 +88,14 @@ jobs:
           JWT="${HEADER_B64}.${PAYLOAD_B64}.${SIGNATURE}"
           echo "::add-mask::$JWT"
 
+          # Extract org from target_repo input
+          TARGET_ORG=$(echo "${{ github.event.inputs.target_repo }}" | cut -d'/' -f1)
+
           # Retrieve installation ID
           INSTALLATION_ID=$(curl -s \
             -H "Authorization: Bearer ${JWT}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/orgs/hackforla/installation" \
+            "https://api.github.com/orgs/${TARGET_ORG}/installation" \
             | jq -r '.id')
           
           if [[ -z "$INSTALLATION_ID" || "$INSTALLATION_ID" == "null" ]]; then
@@ -415,3 +418,13 @@ jobs:
           # Cleanup
           cd ..
           rm -rf temp-repo
+
+  Label-Suggestions:
+    needs: Rollout-Workflow
+    uses: ./.github/workflows/rollout-project-label-suggestions.yml
+    with:
+      target_repo: ${{ github.event.inputs.target_repo }}
+      source_repo: ${{ github.event.inputs.source_repo }}
+      template_file: ${{ github.event.inputs.template_file }}
+      rollout_branch: ${{ github.event.inputs.rollout_branch }}
+    secrets: inherit

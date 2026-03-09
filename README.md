@@ -1,5 +1,5 @@
 # Automate the ORG 
-## Shared GitHub Actions
+## GitHub Actions Monorepo
 
 Centralized GitHub Actions for repository maintenance and automation across the organization.
 
@@ -7,11 +7,27 @@ Centralized GitHub Actions for repository maintenance and automation across the 
 ### Installing an Action to a Project
 To install a centralized GitHub Actions (GHA) to a project repo, follow these steps:  
 
-- Configure both of the organizational GitHub Apps:  
+- Configure both of the organizational GitHub Apps for authentication:  
   - [hfla-workflow-rollout](https://github.com/organizations/hackforla/settings/installations/92646041) gives "Automate the ORG" (source) access to the project (destination) repo during installation.  
   - [hfla-graphql-app](https://github.com/organizations/hackforla/settings/installations/92507394) gives the project (destination) repo access to scripts in "Automate the ORG" (source) during the workflow's runtime.  
   - For both, first scroll to "Repository access", then "Only select repositories", then select the corresponding project repo in the "Select repositories" dropdown.  
   - Click "Save".
+
+- (Recommended) Run the **Rollout Project Label Suggestions** workflow.
+  <details>  
+  &emsp;  
+
+  1. From the "Automate the ORG" repo, select "Actions", then select "Rollout Project Label Suggestions" on the left.  
+  2. On the right, click on "Run workflow" to bring up installation options.  
+  3. Confirm that the `master` branch is selected.  
+  4. Enter the `<project-repo>` for the "Destination repo".  
+  5. Do not change the "Source repo".
+  6. Do not change the "Branch name" or "GitHub App" name. 
+  7. Keep box checked for "Dry run mode". 
+  8. Click "Run workflow". If successful, the "DRY-RUN" output will be found in "Rollout to destination repo".
+  9. Review the Dry-Run results. If these are what you were expecting, run again with "Dry run mode" unchecked.
+  </details>  
+  &emsp;
 
 - Run the **"Rollout Workflow to Project"** workflow from "Automate the ORG". 
   <details>  
@@ -26,6 +42,7 @@ To install a centralized GitHub Actions (GHA) to a project repo, follow these st
   7. Do not change the "Branch name" or "GitHub App" name. 
   8. Keep box checked for "Dry run mode". 
   9. Click "Run workflow". If successful, the "DRY-RUN" output will be found in "Rollout to destination repo".
+  10. Review the Dry-Run results. If these are what you were expecting, run again with "Dry run mode" unchecked.
   </details>  
   &emsp;  
 
@@ -45,7 +62,7 @@ workflow-configs/
 │   └── add-update-label-weekly.js      # "Add Update Label Weekly" files
 │
 ├── shared/                             # Shared utilities across all actions
-│   ├── find-linked-issue.js            # 
+│   ├── find-linked-issue.js            # Find linked issues 
 │   ├── format-log-messages.js          # `logger` utility to sort log messages
 │   ├── get-repo-labels.js              # Retrieves repo labels
 │   ├── hide-issue-comment.js           # Minimizes comments 
@@ -56,7 +73,7 @@ workflow-configs/
 │   └── resolve-configs.js              # Resolve config files
 │
 ├── example-configs/                    # Example configuration files
-│   ├── add-update-instructions-template.example.md⎫  
+│   ├── add-update-instructions-template.example.md⎫ 
 │   ├── add-update-label-weekly-config.example.yml ⎬ Configs for "Add Update Label Weekly"
 │   └── add-update-label-weekly.example.yml        ⎭ 
 │
@@ -68,6 +85,7 @@ workflow-configs/
 ├── CHANGELOG.md                        # Change log for tracking changes per version
 └── README.md                           # This file
 ```
+<br />
 
 ## Available Actions
 
@@ -75,7 +93,9 @@ workflow-configs/
 
 Monitors “In Progress” issues for updates since the last run and posts reminders to assignees who haven’t provided activity.<br>[Full details →](#add-update-label-weekly-1)
 
-### (Additional Coming Soon)
+### (Additional Coming Soon)  
+
+<br />
 
 ---
 
@@ -95,11 +115,11 @@ Choose your desired workflow, then follow the steps to implement it in your repo
   - describe blockers and request help if needed,
   - indicate their availability for working on the issue, and
   - share an estimated time to complete the issue.
-- Applies the label "statusInactive1" : `status: To Update!`<sup>4</sup> if this is the first notice.
+- Applies the label "statusInactive1" : `status: to update!`<sup>4</sup> if this is the first notice.
 - Applies the label "statusInactive2": `status: 2 weeks inactive`<sup>4</sup> if this is the second notice. 
 - Additional features:
   - Minimizes previous, repetitive bot comments within a specified timeframe<sup>2</sup>.
-  - Applies the label (default) "statusUpdated": `Status: Updated`<sup>4</sup> if an update was posted recently.
+  - Applies the label (default) "statusUpdated": `status: updated`<sup>4</sup> if an update was posted recently.
   - Removes previously applied labels when appropriate.
 - Ensures ongoing communication, accountability, and support across active tasks.
 
@@ -114,9 +134,10 @@ These are configurable, see [Step 2: Customize Config →](#step-2-customize-con
 
 #### tbc
 
-### How to Manually Install- 
-Don't do this unless you have a great reason!
+### How to Install 
+:warning: **Warning:** Do not manually install unless you have a great reason! You should be using the ATO automation `rollout-workflow-to-project.yml` to automatically generate a pull request that is already formatted with everything needed to install this workflow.  
 
+If you proceed anyway: 
 #### Step 0: Copy and rename the three workflow files that you need for your workflow. (coming soon)
 
 #### Step 1: Copy GitHub Actions Workflow YML 
@@ -143,15 +164,9 @@ Copy and rename the example configuration file from `example-configs/` into your
   curl -L https://github.com/hackforla/website/raw/main/workflow-configs/example-configs/add-update-label-weekly-config.example.yml \
   -o .github/workflow-configs/add-update-label-weekly-config.yml
   ```
-See [example-configs/add-update-label-config.example.yml](./example-configs/add-update-label-config.example.yml) for a complete example.
-#### Step 3: Copy Label Directory 
-Copy and rename the example label directory file from `example-configs/` into your repo, then customize `.github/workflow-configs/label-directory.json` to match the labels you are using in your project.
 
 
-```bash
-# Ensure target folder exists
-mkdir -p .github/workflow-configs
-```
+
 Correlate the 'labelKey' values to the 'Label Names' that are applicable to your project in the format: 
 ```yml
 labels:
@@ -168,8 +183,8 @@ If you do not include the values in the config files, the default values shown i
 labels:
   required:
     statusUpdated: "Status: Updated"
-    statusInactive1: "To Update!"
-    statusInactive2: "2 weeks inactive"
+    statusInactive1: "Status: To Update!"
+    statusInactive2: "Status: 2 weeks inactive"
     statusHelpWanted: "Status: Help Wanted"
 
 # Filtering labels, exclude issues with any of these labels: 
@@ -178,12 +193,13 @@ labels:
    - "ER"
    - "Epic"
    - "Dependency"
-   - "Complexity: Prework"
+  #  - ""
+  #  - ""
 ```
+See [example-configs/add-update-label-config.example.yml](./example-configs/add-update-label-config.example.yml) for a complete example.
 
 
-
-#### Step 5: About Tokens and Secrets
+#### Step 4: Using Tokens and Secrets
 
 These workflows use centrally maintained GitHub Apps to authorize and authenticate workflows, including  
 `hfla-graphql-app` and `hfla-workflow-rollout`. The GitHub Apps can be configured to allow repository  
@@ -200,8 +216,94 @@ since the App is maintained centrally projects do not need to create tokens or s
 | `needs-updating-by-days` | Override: days for first notice | From config |
 | `is-inactive-by-days` | Override: days for second notice | From config |
 | `target-status` | Override: Project Board status | From config |
-| `label-status-*` | Override: label names | From config |
 
+
+
+
+
+---
+
+## Shared Utilities
+
+Located in `shared/`, these are used across multiple actions:
+
+### `resolve-configs.js`
+
+**Generic configuration loader** used by all actions. Handles:
+- Loading YAML/JSON config files from project repos
+- Merging defaults, file config, and overrides
+- Deep merging of nested objects
+- Config validation
+
+Each action creates its own config loader in `core/[action-name]/config.js` that:
+1. Defines action-specific defaults
+2. Transforms flat action inputs to nested config structure
+3. Calls the generic `resolve-configs.js`
+4. Validates required fields for that action
+
+**Example pattern for new actions:**
+
+```javascript
+// core/your-action/config.js
+const resolveConfigs = require('../../shared/resolve-configs');
+
+function loadYourActionConfig({ projectRepoPath, configPath, overrides }) {
+  const defaults = {
+    // Action-specific defaults
+  };
+  
+  const nestedOverrides = {
+    // Transform flat overrides to nested
+  };
+  
+  const config = resolveConfigs({
+    projectRepoPath,
+    configPath,
+    overrides: nestedOverrides,
+    defaults,
+  });
+  
+  // Validate required fields
+  resolveConfigs.validateConfig(config, ['field1', 'nested.field2']);
+  
+  return config;
+}
+```
+
+### `find-linked-issue.js`
+
+- Parses PR body to find linked issues, e.g. "Fixes: #123", "Resolves: #456", etc.
+
+### `format-log-messages.js`
+
+- Wraps log messages with tags via `logger.` including `[STEP]`, `[INFO]`, `[SUCCESS]`, `[WARN]`, `[ERROR]`, `[DEBUG]`.
+
+### `get-repo-labels.js`
+
+- Retrieves list of all labels from repo
+
+### `hide-issue-comment.js`
+
+- Minimizes comments using GraphQL mutation.
+
+### `manage-issue-labels.js`
+
+- Collection of utility functions for issue labeling, including `addLabels()` and `deleteLabels()`.
+
+### `manage-issue-timeline.js`
+
+- Collection of utility functions for issue timelines, including `setLocalTime()` and `getIssueTimeline()`.
+
+### `post-issue-comment.js`
+
+- Posts a comment onto an issue.
+
+### `query-issue-info.js`
+
+- Uses GraphQL API to find an issue's node_id, Project Board status name, and the corresponding status id.  
+
+
+<br />
 
 ---
 
@@ -286,80 +388,6 @@ Use the following for adjustments to the version tags (but only if you understan
   ```bash
   git push upstream <version>
   ```
-
-
----
-
-## Shared Utilities
-
-Located in `shared/`, these are used across multiple actions:
-
-### resolve-configs.js (Generic Config Loader)
-
-**Generic configuration loader** used by all actions. Handles:
-- Loading YAML/JSON config files from project repos
-- Merging defaults, file config, and overrides
-- Deep merging of nested objects
-- Config validation
-
-Each action creates its own config loader in `core/[action-name]/config.js` that:
-1. Defines action-specific defaults
-2. Transforms flat action inputs to nested config structure
-3. Calls the generic `resolve-configs.js`
-4. Validates required fields for that action
-
-**Example pattern for new actions:**
-
-```javascript
-// core/your-action/config.js
-const resolveConfigs = require('../../shared/resolve-configs');
-
-function loadYourActionConfig({ projectRepoPath, configPath, overrides }) {
-  const defaults = {
-    // Action-specific defaults
-  };
-  
-  const nestedOverrides = {
-    // Transform flat overrides to nested
-  };
-  
-  const config = resolveConfigs({
-    projectRepoPath,
-    configPath,
-    overrides: nestedOverrides,
-    defaults,
-  });
-  
-  // Validate required fields
-  resolveConfigs.validateConfig(config, ['field1', 'nested.field2']);
-  
-  return config;
-}
-```
-
-#### find-linked-issue.js
-
-- Parses PR body to find linked issues (fixes #123, resolves #456, etc.).
-
-#### format-log-messages.js
-
-- Wraps log messages with tags via `logger.` including `[STEP]`, `[INFO]`, `[SUCCESS]`, `[WARN]`, `[ERROR]`, `[DEBUG]`.
-
-#### get-repo-labels.js
-
-- Retrieve list of all labels from repo
-
-#### hide-issue-comment.js
-
-- Minimizes comments using GraphQL mutation.
-
-#### manage-issue-labels.js
-
-- Collection of utility functions for issue labeling, including `addLabels()` and `deleteLabels()`.
-
-#### manage-issue-timeline.js
-
-- Collection of utility functions for issue timelines, including `setLocalTime()` and `getIssueTimeline()`.
 
 ---
 

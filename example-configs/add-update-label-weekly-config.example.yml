@@ -19,8 +19,8 @@
 # Labels and label placeholders used by this workflow
 # ==============================================================================
 #
-# The `required` section is a list of label placeholder keys, identifiers used
-# in the workflow to reference GitHub repo labels. These placeholder label
+# The `required` section lists label placeholder keys, which are identifiers 
+# used in the workflow to reference GitHub repo labels. These placeholder label
 # keys are essential for the workflow to function and must be mapped to the 
 # **actual label names** that exist in your project. Do not change the label 
 # keys, however **do edit** the name values (in quotes) to match your project's 
@@ -31,11 +31,11 @@
 #   statusInactive2: "label for issues considered inactive"
 #   statusHelpWanted: "label for issues where assignees need help"
 # 
-# The `filtering` section is a list of labels that, when present on an issue, 
-# tell the workflow to omit that issue from the update status checks. In other 
-# words, if there is any issue that you want to exclude from the update checks 
-# (for example, a draft issue), label it with one of the 'filtering' labels and 
-# the workflow will skip the issue.
+# The `filtering` section lists labels that, when present on an issue, cause 
+# the workflow to omit that issue from the update status checks. If an issue 
+# should be excluded from the update checks (for example, a draft issue), it 
+# can be labeled with one of the 'filtering' labels and the workflow will skip 
+# that issue.
 #
 # The label names shown below are default values only. Each of the label names
 # shown **must exactly match an existing label** in your project repo, and must
@@ -57,6 +57,19 @@ labels:
     - "dependency" # <-- confirm default label name
     # - "" # <-- Uncomment and add label name if needed.
     # - "" # <-- Uncomment and add label name if needed.
+
+#
+#   NOTE: the following is only applicable to teams that a.) use Skills Issues 
+#   and b.) **have installed the "Member Activity Trigger" workflow**.  
+#   Currently, the only team this applies to is the Website team. 
+#
+# The `modifying` section includes label(s) that change the workflow of the 
+# workflow. For example, the `skills_issue` label is used to identify issues 
+# related to skills development. These issues use different criteria for 
+# determining their update status and are never unassigned. 
+
+  skills_issue:
+    - "complexity: Prework"
 
 
 
@@ -83,7 +96,7 @@ timeframes:
   recentlyUpdatedByDays: 3
   needsUpdatingByDays: 7
   isInactiveByDays: 14
-  unassignedByDays: 21 # <-- FUTURE FEATURE
+  unassignedByDays: 21 
   upperLimitDays: 35
 
 # To reduce issue clutter and repetition, this workflow minimizes previous bot 
@@ -124,6 +137,7 @@ projectBoard:
 # if needed, this value can be updated to ensure bot comments are minimized. 
 
 bots:
+  - "hfla-graphql-app[bot]"
   - "github-actions[bot]"
   - "HackforLABot"
 
