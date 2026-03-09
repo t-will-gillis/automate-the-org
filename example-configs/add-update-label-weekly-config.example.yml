@@ -48,7 +48,7 @@ labels:
     statusUpdated: "status: updated" # <-- confirm default label name
     statusInactive1: "status: to update!" # <-- confirm default label name
     statusInactive2: "status: 2 weeks inactive" # <-- confirm default label name
-    statusHelpWanted: "status: help wanted" # <-- confirm default label name
+    statusHelpWanted: "status: HELP wanted" # <-- confirm default label name
 
   filtering:
     - "draft" # <-- confirm default label name
