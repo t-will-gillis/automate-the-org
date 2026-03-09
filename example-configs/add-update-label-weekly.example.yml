@@ -15,7 +15,6 @@ on:
       dry-run:
         description: 'Run in dry-run mode to preview changes: will not update labels or comments.'
         type: boolean
-        options:
         default: true
 
 jobs:
@@ -37,4 +36,4 @@ jobs:
         uses: hackforla/automate-the-org/gha-add-update-label-weekly@v1
         with:
           github-token: ${{ steps.generate-app-token.outputs.token }}
-          dry-run: ${{ github.event.inputs.dry-run }}
+          dry-run: ${{ github.event_name == 'schedule' && 'false' || github.event.inputs.dry-run || 'true' }}
