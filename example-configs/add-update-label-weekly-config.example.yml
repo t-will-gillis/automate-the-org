@@ -68,7 +68,7 @@ labels:
 # related to skills development. These issues use different criteria for 
 # determining their update status and are never unassigned. 
 
-  skills_issue:
+  modifying:
     - "complexity: PREWORK"
 
 
