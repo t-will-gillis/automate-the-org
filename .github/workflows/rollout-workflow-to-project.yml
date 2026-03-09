@@ -6,11 +6,11 @@ on:
       target_repo:
         description: 'Destination repo, e.g. "org/project":'
         required: true
-        default: 'hackforla/'
+        default: 't-will-gillis/website'
       source_repo:
         description: 'Source repo, e.g. "org/central-repo":'
         required: true
-        default: 'hackforla/automate-the-org'
+        default: 't-will-gillis/automate-the-org'
       template_file:
         description: 'GitHub Action to Install:'
         required: true
@@ -30,7 +30,7 @@ on:
       dry_run:
         description: 'Dry-run mode: preview changes only'
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: write
