@@ -17,6 +17,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - refactor: `rollout-workflow-to-project.yml` — replace hardcoded `hackforla` org in installation URL with `TARGET_ORG` derived from `target_repo` input
 - feat: rename `find-similar-labels.js` → `find-similar-identifiers.js`; refactor to read all inputs from env vars, match both labels and project board status columns, write `suggestions.json` and `pr-comment.md`
 
+## v1.0.7
+2026-03-09
+- feat: edit rollout workflows so rollout labels is triggered by workflow call 
+- feat: `rollout-project-label-suggestions.yml` convert to workflow_call;
+  add steps to extract config identifiers, retrieve Project V2 status cols via
+  GraphQL, pre-fill installed config with best-match suggestions,
+  commit/push updated config, and post PR comment with suggestion tables
+- feat: `rollout-workflow-to-project.yml`: add Label-Suggestions job; replace
+  hardcoded org; add suggestions to PR as comment; edit config file in PR for
+  best match suggestions 
+- feat: `find-similar-identifiers.js` refactor to read all inputs from env 
+  and match both labels and project board status columns, and write 
+  `suggestions.json` and `pr-comment.md`, and automatically writes close matches
+  to `add-update-label-weekly-config.yml`
+
+
 ## v1.0.6
 2026-02-19
 - bug: resetting the GitHub's cache for the version
