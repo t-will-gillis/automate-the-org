@@ -54,7 +54,7 @@ labels:
     - "draft" # <-- confirm default label name
     - "er" # <-- confirm default label name
     - "epic" # <-- confirm default label name
-    - "dependency" # <-- confirm default label name
+    - "dePENdency" # <-- confirm default label name
     # - "" # <-- Uncomment and add label name if needed.
     # - "" # <-- Uncomment and add label name if needed.
 
@@ -69,7 +69,7 @@ labels:
 # determining their update status and are never unassigned. 
 
   skills_issue:
-    - "complexity: Prework"
+    - "complexity: PREWORK"
 
 
 
@@ -123,7 +123,7 @@ timeframes:
 
 projectBoard:
   targetStatus: "In progress (actively working)" # <-- confirm default value
-  questionsStatus: "Questions / In Review" # <-- confirm default value
+  questionsStatus: "Questions / IN Review" # <-- confirm default value
 
 
 
