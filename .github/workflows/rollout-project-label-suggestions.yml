@@ -203,7 +203,7 @@ jobs:
             -H "Accept: application/vnd.github+json" > all_labels.json
 
           # Create compact list of label names
-          jq -c '[.[].name]' all_labels.json > repoLabels.json
+          jq -c '[.[].name | select(ascii_downcase | contains("missing") | not)]' all_labels.json > repoLabels.json
 
           echo "Retrieved labels:"
           jq -r '.[] | @json' repoLabels.json
