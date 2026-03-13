@@ -211,8 +211,9 @@ jobs:
           jq -c '[.[].name]' all_labels.json > repoLabels.json
 
           echo "Retrieved labels:"
-          jq -c '.[] | @json' repoLabels.json
 
+          jq -r '.[] | @json' repoLabels.json
+  
           echo "REPO_LABELS<<EOF" >> $GITHUB_ENV
           jq -c . repoLabels.json >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
