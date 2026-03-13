@@ -268,9 +268,9 @@ jobs:
 
           # Extract all option names from fields named "Status" across all projects, compacted
           PROJ_STATUS_COLS=$(jq -c '[
-            .data.repository.projectsV2.nodes[].fields.nodes[]
+            .data.repositoryOwner.projectsV2.nodes[]?.fields.nodes[]?
             | select(.name == "Status")
-            | .options[].name
+            | .options[]?.name
           ] | unique' project_fields.json)
 
           echo "Retrieved status columns:"
