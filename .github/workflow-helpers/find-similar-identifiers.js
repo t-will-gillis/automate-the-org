@@ -200,21 +200,19 @@ const md = [];
 
 md.push('## Label & Project Board Suggestions');
 md.push('');
-md.push(`The following tables list labels and other values used by the workflow. The "Default value" is the from the default`);
-md.push(`configuration file. The "Suggested value" column lists the closest match found in your repo, along with other close `);
-md.push(`matches in the "Other suggestions" column. These suggestions are meant to help you fill in the config file with `);
+md.push(`The following tables list workflow variables, such as labels and Project Board status-columns, that must be configured before using the workflow. The "Default value" is from this PR's configuration file. The "Suggested value" is the closest match to the default that the automation found in your repo, and the "Other suggestions" column. These suggestions are meant to help you fill in the config file with `);
 md.push(`identifiers that already exist in your repo. Where possible, the config file attached to this PR has been pre-filled`);
 md.push(`with the closest match for each identifier.`);
 md.push(``);
-md.push(`   Please review the "Suggested value" and **update the config file** attached before approving this PR.`);;
+md.push(`Please review the "Suggested value" and **_update the config file_** attached before approving this PR.`);;
 md.push('');
 
 md.push('### Required label(s)');
 md.push('');
 md.push('| Placeholder | Default value | Suggested value | Other suggestions |');
-md.push('|---|---|---|---|');
+md.push('|:---:|:---:|:---:|:---|');
 Object.entries(requiredSuggestions).forEach(([key, { configValue, prefill, suggestions }]) => {
-  const best   = prefill ? `\`${prefill}\`` : '_no match — default kept_';
+  const best   = prefill ? `\`${prefill}\`` : '_no match found_';
   const others = suggestions.filter(s => s !== prefill).map(s => `\`${s}\``).join(', ') || '—';
   md.push(`| \`${key}\` | \`${configValue}\` | ${best} | ${others} |`);
 });
@@ -223,9 +221,9 @@ md.push('');
 md.push('### Filtering label(s)');
 md.push('');
 md.push('| Placeholder | Default value | Suggested value | Other suggestions |');
-md.push('|---|---|---|---|');
+md.push('|:---:|:---:|:---:|:---|');
 Object.entries(filteringSuggestions).forEach(([label, { prefill, suggestions }]) => {
-  const best   = prefill ? `\`${prefill}\`` : '_no match — default kept_';
+  const best   = prefill ? `\`${prefill}\`` : '_no match found_';
   const others = suggestions.filter(s => s !== prefill).map(s => `\`${s}\``).join(', ') || '—';
   md.push(`| - | \`${label}\` | ${best} | ${others} |`);
 });
@@ -235,29 +233,45 @@ if (modifying.length > 0) {
   md.push('### Modifying label(s)');
   md.push('');
   md.push('| Placeholder | Default value | Suggested value | Other suggestions |');
-  md.push('|---|---|---|---|');
+  md.push('|:---:|:---:|:---:|:---|');
   Object.entries(modifyingSuggestions).forEach(([label, { prefill, suggestions }]) => {
-    const best   = prefill ? `\`${prefill}\`` : '_no match — default kept_';
+    const best   = prefill ? `\`${prefill}\`` : '_no match found_';
     const others = suggestions.filter(s => s !== prefill).map(s => `\`${s}\``).join(', ') || '—';
     md.push(`| - | \`${label}\` | ${best} | ${others} |`);
   });
   md.push('');
 }
 
+// if (Object.keys(statusCols).length > 0) {
+//   md.push('### Project Board status-columns');
+//   md.push('');
+//   md.push('| Placeholder | Default value | Suggested value | Other suggestions |');
+//   md.push('|:---:|:---:|:---:|:---|');
+//   Object.entries(statusColSuggestions).forEach(([key, { configValue, prefill, suggestions }]) => {
+//     const best   = prefill ? `\`${prefill}\`` : '_no match found_';
+//     const others = suggestions.filter(s => s !== prefill).map(s => `\`${s}\``).join(', ') || '—';
+//     md.push(`| \`${key}\` | \`${configValue}\` | ${best} | ${others} |`);
+//   });
+//   md.push('');
+// }
+
 if (Object.keys(statusCols).length > 0) {
-  md.push('### Project board status columns');
+  md.push('### Project Board status-columns');
   md.push('');
-  md.push('| Placeholder | Default value | Suggested value | Other suggestions |');
-  md.push('|---|---|---|---|');
-  Object.entries(statusColSuggestions).forEach(([key, { configValue, prefill, suggestions }]) => {
-    const best   = prefill ? `\`${prefill}\`` : '_no match — default kept_';
-    const others = suggestions.filter(s => s !== prefill).map(s => `\`${s}\``).join(', ') || '—';
-    md.push(`| \`${key}\` | \`${configValue}\` | ${best} | ${others} |`);
+  md.push('| Placeholder | Default value | Suggested value |');
+  md.push('|:---:|:---:|:---|');
+  Object.entries(statusColSuggestions).forEach(([key, { configValue }]) => {
+    const best   = 'Review your actualproject status-columns and update config file manually';
+    md.push(`| \`${key}\` | \`${configValue}\` | ${best} |`);
   });
   md.push('');
 }
 
 fs.writeFileSync('pr-comment.md', md.join('\n'));
+
+// Console output for visibility in all run modes
+console.log(JSON.stringify(allSuggestions, null, 2));
+FileSync('pr-comment.md', md.join('\n'));
 
 // Console output for visibility in all run modes
 console.log(JSON.stringify(allSuggestions, null, 2));
