@@ -242,36 +242,19 @@ if (modifying.length > 0) {
   md.push('');
 }
 
-// if (Object.keys(statusCols).length > 0) {
-//   md.push('### Project Board status-columns');
-//   md.push('');
-//   md.push('| Placeholder | Default value | Suggested value | Other suggestions |');
-//   md.push('|:---:|:---:|:---:|:---|');
-//   Object.entries(statusColSuggestions).forEach(([key, { configValue, prefill, suggestions }]) => {
-//     const best   = prefill ? `\`${prefill}\`` : '_no match found_';
-//     const others = suggestions.filter(s => s !== prefill).map(s => `\`${s}\``).join(', ') || '—';
-//     md.push(`| \`${key}\` | \`${configValue}\` | ${best} | ${others} |`);
-//   });
-//   md.push('');
-// }
-
 if (Object.keys(statusCols).length > 0) {
   md.push('### Project Board status-columns');
   md.push('');
   md.push('| Placeholder | Default value | Suggested value |');
   md.push('|:---:|:---:|:---|');
   Object.entries(statusColSuggestions).forEach(([key, { configValue }]) => {
-    const best   = 'Review your actualproject status-columns and update config file manually';
+    const best   = 'NOTE: Review your project\'s actual status-columns & update config file manually';
     md.push(`| \`${key}\` | \`${configValue}\` | ${best} |`);
   });
   md.push('');
 }
 
 fs.writeFileSync('pr-comment.md', md.join('\n'));
-
-// Console output for visibility in all run modes
-console.log(JSON.stringify(allSuggestions, null, 2));
-FileSync('pr-comment.md', md.join('\n'));
 
 // Console output for visibility in all run modes
 console.log(JSON.stringify(allSuggestions, null, 2));
