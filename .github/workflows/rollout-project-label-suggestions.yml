@@ -211,7 +211,7 @@ jobs:
           jq -c '[.[].name]' all_labels.json > repoLabels.json
 
           echo "Retrieved labels:"
-          jq -r '.[] | tostring' repoLabels.json
+          jq -c '.[] | @json' repoLabels.json
 
           echo "REPO_LABELS<<EOF" >> $GITHUB_ENV
           jq -c . repoLabels.json >> $GITHUB_ENV
@@ -228,7 +228,7 @@ jobs:
           gh api graphql -f query='
             query($owner: String!, $repo: String!) {
               repository(owner: $owner, name: $repo) {
-                projectsV2(first: 20) {
+                projectsV2(first: 1) {
                   nodes {
                     title
                     fields(first: 20) {
@@ -247,9 +247,6 @@ jobs:
             }
           ' -f owner="$TARGET_ORG" -f repo="$PROJECT_NAME" > project_fields.json
           
-          echo "=== RAW PROJECT FIELDS ==="
-          cat project_fields.json | jq .
-
           # Fail fast if GraphQL returned errors
           if jq -e '.errors' project_fields.json > /dev/null 2>&1; then
             echo "::error title=GraphQL error::Project V2 query returned errors"
@@ -265,7 +262,7 @@ jobs:
           ] | unique' project_fields.json)
 
           echo "Retrieved status columns:"
-          echo "$PROJ_STATUS_COLS" | jq -r '.[]'
+          echo "$PROJ_STATUS_COLS" | jq -r '.[] | @json'
           
           echo "PROJ_STATUS_COLS<<EOF" >> $GITHUB_ENV
           echo "$PROJ_STATUS_COLS" >> $GITHUB_ENV
@@ -299,64 +296,64 @@ jobs:
         run: |
           node central/.github/workflow-helpers/find-similar-identifiers.js
 
-      - name: Apply suggestions to config file
-        id: apply-suggestions
-        if: steps.switch-branch.outputs.rollout_branch_exists == 'true'
-        run: |
-          set -e
+      # - name: Apply suggestions to config file
+      #   id: apply-suggestions
+      #   if: steps.switch-branch.outputs.rollout_branch_exists == 'true'
+      #   run: |
+      #     set -e
 
-          # Derive installed config path from template name
-          CONFIG_FILENAME=$(echo "$TEMPLATE_FILE" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
-          CONFIG_FILE="target/github-actions/workflow-configs/${CONFIG_FILENAME}-config.yml"
+      #     # Derive installed config path from template name
+      #     CONFIG_FILENAME=$(echo "$TEMPLATE_FILE" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+      #     CONFIG_FILE="target/github-actions/workflow-configs/${CONFIG_FILENAME}-config.yml"
 
-          if [[ ! -f "$CONFIG_FILE" ]]; then
-            echo "::warning title=Config file not found::Expected config at $CONFIG_FILE — skipping pre-fill"
-            exit 0
-          fi
+      #     if [[ ! -f "$CONFIG_FILE" ]]; then
+      #       echo "::warning title=Config file not found::Expected config at $CONFIG_FILE — skipping pre-fill"
+      #       exit 0
+      #     fi
 
-          echo "Applying best-match suggestions to $CONFIG_FILE..."
+      #     echo "Applying best-match suggestions to $CONFIG_FILE..."
 
-          # Apply required label suggestions (object keys — use env(YQ_KEY) to avoid shell interpolation in path)
-          jq -r '.required | to_entries[] | select(.value.prefill != null) | "\(.key)\t\(.value.prefill)"' suggestions.json | \
-          while IFS=$'\t' read -r key suggestion; do
-            echo "  labels.required.$key -> $suggestion"
-            export YQ_KEY="$key"
-            VALUE="$suggestion" yq e \
-              '.labels.required[env(YQ_KEY)] = env(VALUE) | (.labels.required[env(YQ_KEY)] | style) = "double"' \
-              -i "$CONFIG_FILE"
-          done
+      #     # Apply required label suggestions (object keys — use env(YQ_KEY) to avoid shell interpolation in path)
+      #     jq -r '.required | to_entries[] | select(.value.prefill != null) | "\(.key)\t\(.value.prefill)"' suggestions.json | \
+      #     while IFS=$'\t' read -r key suggestion; do
+      #       echo "  labels.required.$key -> $suggestion"
+      #       export YQ_KEY="$key"
+      #       VALUE="$suggestion" yq e \
+      #         '.labels.required[env(YQ_KEY)] = env(VALUE) | (.labels.required[env(YQ_KEY)] | style) = "double"' \
+      #         -i "$CONFIG_FILE"
+      #     done
 
-          # Apply filtering label suggestions (array — match by value)
-          jq -r '.filtering | to_entries[] | select(.value.prefill != null) | "\(.key)\t\(.value.prefill)"' suggestions.json | \
-          while IFS=$'\t' read -r old_val new_val; do
-            echo "  labels.filtering: $old_val -> $new_val"
-            OLD="$old_val" NEW="$new_val" yq e \
-              '(.labels.filtering[] | select(. == env(OLD))) = env(NEW)' -i "$CONFIG_FILE"
-            NEW="$new_val" yq e \
-              '(.labels.filtering[] | select(. == env(NEW)) | style) = "double"' -i "$CONFIG_FILE"
-          done
+      #     # Apply filtering label suggestions (array — match by value)
+      #     jq -r '.filtering | to_entries[] | select(.value.prefill != null) | "\(.key)\t\(.value.prefill)"' suggestions.json | \
+      #     while IFS=$'\t' read -r old_val new_val; do
+      #       echo "  labels.filtering: $old_val -> $new_val"
+      #       OLD="$old_val" NEW="$new_val" yq e \
+      #         '(.labels.filtering[] | select(. == env(OLD))) = env(NEW)' -i "$CONFIG_FILE"
+      #       NEW="$new_val" yq e \
+      #         '(.labels.filtering[] | select(. == env(NEW)) | style) = "double"' -i "$CONFIG_FILE"
+      #     done
 
-          # Apply modifying (skills_issue) label suggestions (array — match by value)
-          if jq -e '.modifying' suggestions.json > /dev/null 2>&1; then
-            jq -r '.modifying | to_entries[] | select(.value.prefill != null) | "\(.key)\t\(.value.prefill)"' suggestions.json | \
-            while IFS=$'\t' read -r old_val new_val; do
-              echo "  labels.skills_issue: $old_val -> $new_val"
-              OLD="$old_val" NEW="$new_val" yq e \
-                '(.labels.skills_issue[] | select(. == env(OLD))) = env(NEW)' -i "$CONFIG_FILE"
-              NEW="$new_val" yq e \
-                '(.labels.skills_issue[] | select(. == env(NEW)) | style) = "double"' -i "$CONFIG_FILE"
-            done
-          fi
+      #     # Apply modifying (skills_issue) label suggestions (array — match by value)
+      #     if jq -e '.modifying' suggestions.json > /dev/null 2>&1; then
+      #       jq -r '.modifying | to_entries[] | select(.value.prefill != null) | "\(.key)\t\(.value.prefill)"' suggestions.json | \
+      #       while IFS=$'\t' read -r old_val new_val; do
+      #         echo "  labels.skills_issue: $old_val -> $new_val"
+      #         OLD="$old_val" NEW="$new_val" yq e \
+      #           '(.labels.skills_issue[] | select(. == env(OLD))) = env(NEW)' -i "$CONFIG_FILE"
+      #         NEW="$new_val" yq e \
+      #           '(.labels.skills_issue[] | select(. == env(NEW)) | style) = "double"' -i "$CONFIG_FILE"
+      #       done
+      #     fi
 
-          # Apply status column suggestions (object keys — use env(YQ_KEY))
-          jq -r '(.statusCols // {}) | to_entries[] | select(.value.prefill != null) | "\(.key)\t\(.value.prefill)"' suggestions.json | \
-          while IFS=$'\t' read -r key suggestion; do
-            echo "  projectBoard.$key -> $suggestion"
-            export YQ_KEY="$key"
-            VALUE="$suggestion" yq e \
-              '.projectBoard[env(YQ_KEY)] = env(VALUE) | (.projectBoard[env(YQ_KEY)] | style) = "double"' \
-              -i "$CONFIG_FILE"
-          done
+      #     # Apply status column suggestions (object keys — use env(YQ_KEY))
+      #     jq -r '(.statusCols // {}) | to_entries[] | select(.value.prefill != null) | "\(.key)\t\(.value.prefill)"' suggestions.json | \
+      #     while IFS=$'\t' read -r key suggestion; do
+      #       echo "  projectBoard.$key -> $suggestion"
+      #       export YQ_KEY="$key"
+      #       VALUE="$suggestion" yq e \
+      #         '.projectBoard[env(YQ_KEY)] = env(VALUE) | (.projectBoard[env(YQ_KEY)] | style) = "double"' \
+      #         -i "$CONFIG_FILE"
+      #     done
 
       - name: Post suggestions as PR comment
         id: post-pr-comment
