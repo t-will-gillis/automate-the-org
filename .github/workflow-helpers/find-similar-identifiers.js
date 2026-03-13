@@ -80,7 +80,10 @@ function findSimilarIdentifiers(needle, haystack, limit = MAX_SUGGESTIONS) {
     ? suggestions[0]
     : null;
 
-  return { prefill, suggestions };
+  // Remove prefill from suggestions so "best" and "others" are mutually exclusive
+  const others = prefill ? suggestions.filter(s => s !== prefill) : suggestions;
+
+  return { prefill, suggestions: others };
 }
 
 // **************************************************************************
@@ -150,34 +153,44 @@ const statusCols = JSON.parse(process.env.CONFIG_STATUS_COLS || "{}");
 const repoLabels     = JSON.parse(process.env.REPO_LABELS);
 const projStatusCols = JSON.parse(process.env.PROJ_STATUS_COLS || "[]");
 
+// Mutable pools — claimed prefills are removed to prevent duplicate assignments
+let availableLabels = [...repoLabels];
+let availableStatusCols = [...projStatusCols];
+
 // Match required labels against repo labels
 // Result: { configKey: { configValue, prefill, suggestions } }
 const requiredSuggestions = {};
 Object.entries(required).forEach(([key, value]) => {
-  const { prefill, suggestions } = findSimilarIdentifiers(value, repoLabels);
+  const { prefill, suggestions } = findSimilarIdentifiers(value, availableLabels);
   requiredSuggestions[key] = { configValue: value, prefill, suggestions };
+  if (prefill) availableLabels = availableLabels.filter(l => l !== prefill);
 });
 
 // Match filtering labels against repo labels
 // Result: { defaultValue: { prefill, suggestions } }
 const filteringSuggestions = {};
 filtering.forEach(label => {
-  filteringSuggestions[label] = findSimilarIdentifiers(label, repoLabels);
+  const result = findSimilarIdentifiers(label, availableLabels);
+  filteringSuggestions[label] = result;
+  if (result.prefill) availableLabels = availableLabels.filter(l => l !== result.prefill);
 });
 
 // Match modifying labels against repo labels (optional — may be empty)
 // Result: { defaultValue: { prefill, suggestions } }
 const modifyingSuggestions = {};
 modifying.forEach(label => {
-  modifyingSuggestions[label] = findSimilarIdentifiers(label, repoLabels);
+  const result = findSimilarIdentifiers(label, availableLabels);
+  modifyingSuggestions[label] = result;
+  if (result.prefill) availableLabels = availableLabels.filter(l => l !== result.prefill);
 });
 
 // Match config status columns against the repo's actual project board columns
 // Result: { configKey: { configValue, prefill, suggestions } }
 const statusColSuggestions = {};
 Object.entries(statusCols).forEach(([key, value]) => {
-  const { prefill, suggestions } = findSimilarIdentifiers(value, projStatusCols);
+  const { prefill, suggestions } = findSimilarIdentifiers(value, availableStatusCols);
   statusColSuggestions[key] = { configValue: value, prefill, suggestions };
+  if (prefill) availableStatusCols = availableStatusCols.filter(c => c !== prefill);
 });
 
 // **************************************************************************
@@ -213,7 +226,7 @@ md.push('| Placeholder | Default value | Suggested value | Other suggestions |')
 md.push('|:---:|:---:|:---:|:---|');
 Object.entries(requiredSuggestions).forEach(([key, { configValue, prefill, suggestions }]) => {
   const best   = prefill ? `\`${prefill}\`` : '_no match found_';
-  const others = suggestions.filter(s => s !== prefill).map(s => `\`${s}\``).join(', ') || '—';
+  const others = suggestions.map(s => `\`${s}\``).join(', ') || '—';
   md.push(`| \`${key}\` | \`${configValue}\` | ${best} | ${others} |`);
 });
 md.push('');
@@ -224,7 +237,7 @@ md.push('| Placeholder | Default value | Suggested value | Other suggestions |')
 md.push('|:---:|:---:|:---:|:---|');
 Object.entries(filteringSuggestions).forEach(([label, { prefill, suggestions }]) => {
   const best   = prefill ? `\`${prefill}\`` : '_no match found_';
-  const others = suggestions.filter(s => s !== prefill).map(s => `\`${s}\``).join(', ') || '—';
+  const others = suggestions.map(s => `\`${s}\``).join(', ') || '—';
   md.push(`| - | \`${label}\` | ${best} | ${others} |`);
 });
 md.push('');
@@ -236,7 +249,7 @@ if (modifying.length > 0) {
   md.push('|:---:|:---:|:---:|:---|');
   Object.entries(modifyingSuggestions).forEach(([label, { prefill, suggestions }]) => {
     const best   = prefill ? `\`${prefill}\`` : '_no match found_';
-    const others = suggestions.filter(s => s !== prefill).map(s => `\`${s}\``).join(', ') || '—';
+    const others = suggestions.map(s => `\`${s}\``).join(', ') || '—';
     md.push(`| - | \`${label}\` | ${best} | ${others} |`);
   });
   md.push('');
