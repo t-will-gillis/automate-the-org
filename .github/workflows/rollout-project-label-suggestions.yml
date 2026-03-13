@@ -6,16 +6,20 @@ on:
     inputs:
       target_repo:
         required: true
-        type: string
+        default: 't-will-gillis/website'
       source_repo:
         required: true
-        type: string
+        default: 't-will-gillis/automate-the-org'
       template_file:
         required: true
-        type: string
+        default: 'Add Update Label Weekly'
       rollout_branch:
+        required: false
+        default: 'automation/rollout-central-workflow'
+      github_app_name:
+        description: 'GitHub App name/slug:'
         required: true
-        type: string
+        default: 'hfla-workflow-rollout'
 
 jobs:
   Rollout-Label-Directory:
