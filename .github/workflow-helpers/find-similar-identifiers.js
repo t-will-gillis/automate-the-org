@@ -229,9 +229,9 @@ const md = [];
 
 md.push('## Label & Project Board Suggestions');
 md.push('');
-md.push(`The following tables list workflow variables, such as labels and Project Board status-columns, that must be configured before using the workflow. The "Default value" is from this PR's configuration file. The "Suggested value" is the closest match to the default that the automation found in your repo, with "Other suggestions" listing the next closest matches. These suggestions are meant to help you fill in the \`config.yml\` file with the correct values from your repo.`);
+md.push(`The following tables list workflow variables, such as labels and Project Board status-columns, that must be configured before using the workflow. The "Default value" is from this PR's configuration file. The "Suggested value" is the closest match to the default that the automation found in your repo, with "Other suggestions" listing the next closest matches. These suggestions are meant to help you fill in the config file with the correct values from your repo.`);
 md.push(``);
-md.push(`Please review the "Suggested value(s)" shown and **update the attached config.yml** before committing this PR.`);;
+md.push(`Please review the "Suggested value(s)" shown and update the attached config file before committing this PR.`);;
 md.push('');
 
 md.push('### Required label(s)');
@@ -239,9 +239,9 @@ md.push('');
 md.push('| Placeholder | Default value | Suggested value | Other suggestions |');
 md.push('|:---:|:---:|:---:|:---|');
 Object.entries(requiredSuggestions).forEach(([key, { configValue, prefill, suggestions }]) => {
-  const best   = prefill ? `\"${prefill}\"` : '<em>no match found</em>';
+  const best   = prefill ? `"${prefill}"` : '<em>no match found</em>';
   const others = suggestions.map(s => `\"${s}\"`).join(', ') || '—';
-  md.push(`| \`${key}\` | \`${configValue}\` | ${best} | ${others} |`);
+  md.push(`| ${key}: | "${configValue}" | ${best} | ${others} |`);
 });
 md.push('');
 
@@ -250,9 +250,9 @@ md.push('');
 md.push('| Placeholder | Default value | Suggested value | Other suggestions |');
 md.push('|:---:|:---:|:---:|:---|');
 Object.entries(filteringSuggestions).forEach(([label, { prefill, suggestions }]) => {
-  const best   = prefill ? `\"${prefill}\"` : '<em>no match found</em>';
-  const others = suggestions.map(s => `\"${s}\"`).join(', ') || '—';
-  md.push(`| - | ${label} | ${best} | ${others} |`);
+  const best   = prefill ? `"${prefill}"` : '<em>no match found</em>';
+  const others = suggestions.map(s => `"${s}"`).join(', ') || '—';
+  md.push(`| --- | "${label}" | ${best} | ${others} |`);
 });
 md.push('');
 
@@ -262,9 +262,9 @@ if (modifying.length > 0) {
   md.push('| Placeholder | Default value | Suggested value | Other suggestions |');
   md.push('|:---:|:---:|:---:|:---|');
   Object.entries(modifyingSuggestions).forEach(([label, { prefill, suggestions }]) => {
-    const best   = prefill ? "${prefill}" : '<em>no match found</em>';
-    const others = suggestions.map(s => `\"${s}\"`).join(', ') || '—';
-    md.push(`| - | ${label} | ${best} | ${others} |`);
+    const best   = prefill ? `"${prefill}"` : '<em>no match found</em>';
+    const others = suggestions.map(s => `"${s}"`).join(', ') || '—';
+    md.push(`| --- | "${label}" | ${best} | ${others} |`);
   });
   md.push('');
 }
@@ -276,7 +276,7 @@ if (Object.keys(statusCols).length > 0) {
   md.push('|:---:|:---:|:---|');
   Object.entries(statusColSuggestions).forEach(([key, { configValue }]) => {
     const best   = `_NOTE: Review your project's actual status-&#8209;columns<br>and **manually** update the config.yml file_`;
-    md.push(`| ${key} | ${configValue} | ${best} |`);
+    md.push(`| "${key}" | "${configValue}" | ${best} |`);
   });
   md.push('');
 }
