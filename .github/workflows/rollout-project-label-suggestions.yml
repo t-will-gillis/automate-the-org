@@ -219,17 +219,36 @@ jobs:
           echo "Retrieving Project V2 status column names from '$TARGET_REPO'..."
 
           gh api graphql -f query='
-            query($owner: String!, $repo: String!) {
-              repository(owner: $owner, name: $repo) {
-                projectsV2(first: 20) {
-                  nodes {
-                    title
-                    fields(first: 20) {
-                      nodes {
-                        ... on ProjectV2SingleSelectField {
-                          name
-                          options {
+            query($owner: String!) {
+              repositoryOwner(login: $owner) {
+                ... on User {
+                  projectsV2(first: 20) {
+                    nodes {
+                      title
+                      fields(first: 20) {
+                        nodes {
+                          ... on ProjectV2SingleSelectField {
                             name
+                            options {
+                              name
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                ... on Organization {
+                  projectsV2(first: 20) {
+                    nodes {
+                      title
+                      fields(first: 20) {
+                        nodes {
+                          ... on ProjectV2SingleSelectField {
+                            name
+                            options {
+                              name
+                            }
                           }
                         }
                       }
@@ -238,7 +257,7 @@ jobs:
                 }
               }
             }
-          ' -f owner="$TARGET_ORG" -f repo="$PROJECT_NAME" > project_fields.json
+          ' -f owner="$TARGET_ORG" > project_fields.json
 
           # Fail fast if GraphQL returned errors
           if jq -e '.errors' project_fields.json > /dev/null 2>&1; then
