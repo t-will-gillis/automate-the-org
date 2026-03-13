@@ -2,6 +2,7 @@ name: Rollout Project Label Suggestions
 
 on:
   workflow_call:
+  workflow_dispatch: 
     inputs:
       target_repo:
         required: true
@@ -260,9 +261,11 @@ jobs:
           ] | unique' project_fields.json)
 
           echo "Retrieved status columns:"
-          echo "$PROJ_STATUS_COLS"
-
-          echo "PROJ_STATUS_COLS=$PROJ_STATUS_COLS" >> $GITHUB_ENV
+          echo "$PROJ_STATUS_COLS" | jq -r '.[]'
+          
+          echo "PROJ_STATUS_COLS<<EOF" >> $GITHUB_ENV
+          echo "$PROJ_STATUS_COLS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Switch to rollout branch in destination repo
         id: switch-branch
@@ -350,28 +353,6 @@ jobs:
               '.projectBoard[env(YQ_KEY)] = env(VALUE) | (.projectBoard[env(YQ_KEY)] | style) = "double"' \
               -i "$CONFIG_FILE"
           done
-
-      # - name: Commit and push updated config
-      #   id: commit-config
-      #   if: steps.switch-branch.outputs.rollout_branch_exists == 'true'
-      #   run: |
-      #     set -e
-      #     cd target
-
-      #     CONFIG_FILENAME=$(echo "$TEMPLATE_FILE" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
-      #     CONFIG_FILE="github-actions/workflow-configs/${CONFIG_FILENAME}-config.yml"
-
-      #     git config user.name "hfla-graphql-app[bot]"
-      #     git config user.email "hfla-graphql-app@users.noreply.github.com"
-
-      #     git add "$CONFIG_FILE"
-      #     if git diff --staged --quiet; then
-      #       echo "No suggestions applied — config unchanged."
-      #     else
-      #       git commit -m "Pre-fill config with best-match label suggestions"
-      #       git push origin "$ROLLOUT_BRANCH"
-      #       echo "Pushed updated config to $ROLLOUT_BRANCH"
-      #     fi
 
       - name: Post suggestions as PR comment
         id: post-pr-comment
