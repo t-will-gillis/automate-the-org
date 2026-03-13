@@ -138,6 +138,31 @@ function similarityScore(a, b) {
   return 1 - (dist / maxLen);
 }
 
+/**
+ * Two-pass matching against a shared mutable pool.
+ * Pass 1: claim all prefills in order, removing each from the pool in place.
+ * Pass 2: compute others for every needle against the fully-depleted pool,
+ *         so no claimed prefill can ever appear in any entry's "others" list.
+ *
+ * @param {string[]} needles - Values to match, in priority order
+ * @param {string[]} pool    - Mutated in place during pass 1
+ * @returns {{ prefill: string|null, suggestions: string[] }[]}
+ */
+function twoPassMatch(needles, pool) {
+  // Pass 1: claim prefills
+  const prefills = needles.map(needle => {
+    const { prefill } = findSimilarIdentifiers(needle, pool);
+    if (prefill) pool.splice(pool.indexOf(prefill), 1);
+    return prefill;
+  });
+
+  // Pass 2: find others from the fully-depleted pool
+  return needles.map((needle, i) => ({
+    prefill: prefills[i],
+    suggestions: findSimilarIdentifiers(needle, pool).suggestions,
+  }));
+}
+
 // **************************************************************************
 // * Main execution                                                         *
 // **************************************************************************
@@ -153,44 +178,35 @@ const statusCols = JSON.parse(process.env.CONFIG_STATUS_COLS || "{}");
 const repoLabels     = JSON.parse(process.env.REPO_LABELS);
 const projStatusCols = JSON.parse(process.env.PROJ_STATUS_COLS || "[]");
 
-// Mutable pools — claimed prefills are removed to prevent duplicate assignments
-let availableLabels = [...repoLabels];
-let availableStatusCols = [...projStatusCols];
+// Shared label pool — depleted across all three label groups in priority order
+// (required → filtering → modifying) so prefills are never double-assigned
+const labelPool  = [...repoLabels];
+const statusPool = [...projStatusCols];
 
-// Match required labels against repo labels
-// Result: { configKey: { configValue, prefill, suggestions } }
+// Match required labels — object, so extract entries to preserve key→value mapping
+const requiredEntries = Object.entries(required);
+const requiredResults = twoPassMatch(requiredEntries.map(([, v]) => v), labelPool);
 const requiredSuggestions = {};
-Object.entries(required).forEach(([key, value]) => {
-  const { prefill, suggestions } = findSimilarIdentifiers(value, availableLabels);
-  requiredSuggestions[key] = { configValue: value, prefill, suggestions };
-  if (prefill) availableLabels = availableLabels.filter(l => l !== prefill);
+requiredEntries.forEach(([key, value], i) => {
+  requiredSuggestions[key] = { configValue: value, ...requiredResults[i] };
 });
 
-// Match filtering labels against repo labels
-// Result: { defaultValue: { prefill, suggestions } }
+// Match filtering labels — array, needle === display key
+const filteringResults = twoPassMatch(filtering, labelPool);
 const filteringSuggestions = {};
-filtering.forEach(label => {
-  const result = findSimilarIdentifiers(label, availableLabels);
-  filteringSuggestions[label] = result;
-  if (result.prefill) availableLabels = availableLabels.filter(l => l !== result.prefill);
-});
+filtering.forEach((label, i) => { filteringSuggestions[label] = filteringResults[i]; });
 
-// Match modifying labels against repo labels (optional — may be empty)
-// Result: { defaultValue: { prefill, suggestions } }
+// Match modifying labels — array (optional)
+const modifyingResults = twoPassMatch(modifying, labelPool);
 const modifyingSuggestions = {};
-modifying.forEach(label => {
-  const result = findSimilarIdentifiers(label, availableLabels);
-  modifyingSuggestions[label] = result;
-  if (result.prefill) availableLabels = availableLabels.filter(l => l !== result.prefill);
-});
+modifying.forEach((label, i) => { modifyingSuggestions[label] = modifyingResults[i]; });
 
-// Match config status columns against the repo's actual project board columns
-// Result: { configKey: { configValue, prefill, suggestions } }
+// Match status columns — separate pool, same two-pass logic
+const statusEntries = Object.entries(statusCols);
+const statusColResults = twoPassMatch(statusEntries.map(([, v]) => v), statusPool);
 const statusColSuggestions = {};
-Object.entries(statusCols).forEach(([key, value]) => {
-  const { prefill, suggestions } = findSimilarIdentifiers(value, availableStatusCols);
-  statusColSuggestions[key] = { configValue: value, prefill, suggestions };
-  if (prefill) availableStatusCols = availableStatusCols.filter(c => c !== prefill);
+statusEntries.forEach(([key, value], i) => {
+  statusColSuggestions[key] = { configValue: value, ...statusColResults[i] };
 });
 
 // **************************************************************************
@@ -213,11 +229,9 @@ const md = [];
 
 md.push('## Label & Project Board Suggestions');
 md.push('');
-md.push(`The following tables list workflow variables, such as labels and Project Board status-columns, that must be configured before using the workflow. The "Default value" is from this PR's configuration file. The "Suggested value" is the closest match to the default that the automation found in your repo, and the "Other suggestions" column. These suggestions are meant to help you fill in the config file with `);
-md.push(`identifiers that already exist in your repo. Where possible, the config file attached to this PR has been pre-filled`);
-md.push(`with the closest match for each identifier.`);
+md.push(`The following tables list workflow variables, such as labels and Project Board status-columns, that must be configured before using the workflow. The "Default value" is from this PR's configuration file. The "Suggested value" is the closest match to the default that the automation found in your repo, with "Other suggestions" listing the next closest matches. These suggestions are meant to help you fill in the \`config.yml\` file with the correct values from your repo.`);
 md.push(``);
-md.push(`Please review the "Suggested value" and **_update the config file_** attached before approving this PR.`);;
+md.push(`Please review the "Suggested value(s)" shown and **update the attached config.yml** before committing this PR.`);;
 md.push('');
 
 md.push('### Required label(s)');
@@ -225,8 +239,8 @@ md.push('');
 md.push('| Placeholder | Default value | Suggested value | Other suggestions |');
 md.push('|:---:|:---:|:---:|:---|');
 Object.entries(requiredSuggestions).forEach(([key, { configValue, prefill, suggestions }]) => {
-  const best   = prefill ? `\`${prefill}\`` : '_no match found_';
-  const others = suggestions.map(s => `\`${s}\``).join(', ') || '—';
+  const best   = prefill ? `\"${prefill}\"` : '<em>no match found</em>';
+  const others = suggestions.map(s => `\"${s}\"`).join(', ') || '—';
   md.push(`| \`${key}\` | \`${configValue}\` | ${best} | ${others} |`);
 });
 md.push('');
@@ -236,9 +250,9 @@ md.push('');
 md.push('| Placeholder | Default value | Suggested value | Other suggestions |');
 md.push('|:---:|:---:|:---:|:---|');
 Object.entries(filteringSuggestions).forEach(([label, { prefill, suggestions }]) => {
-  const best   = prefill ? `\`${prefill}\`` : '_no match found_';
-  const others = suggestions.map(s => `\`${s}\``).join(', ') || '—';
-  md.push(`| - | \`${label}\` | ${best} | ${others} |`);
+  const best   = prefill ? `\"${prefill}\"` : '<em>no match found</em>';
+  const others = suggestions.map(s => `\"${s}\"`).join(', ') || '—';
+  md.push(`| - | ${label} | ${best} | ${others} |`);
 });
 md.push('');
 
@@ -248,9 +262,9 @@ if (modifying.length > 0) {
   md.push('| Placeholder | Default value | Suggested value | Other suggestions |');
   md.push('|:---:|:---:|:---:|:---|');
   Object.entries(modifyingSuggestions).forEach(([label, { prefill, suggestions }]) => {
-    const best   = prefill ? `\`${prefill}\`` : '_no match found_';
-    const others = suggestions.map(s => `\`${s}\``).join(', ') || '—';
-    md.push(`| - | \`${label}\` | ${best} | ${others} |`);
+    const best   = prefill ? "${prefill}" : '<em>no match found</em>';
+    const others = suggestions.map(s => `\"${s}\"`).join(', ') || '—';
+    md.push(`| - | ${label} | ${best} | ${others} |`);
   });
   md.push('');
 }
@@ -261,8 +275,8 @@ if (Object.keys(statusCols).length > 0) {
   md.push('| Placeholder | Default value | Suggested value |');
   md.push('|:---:|:---:|:---|');
   Object.entries(statusColSuggestions).forEach(([key, { configValue }]) => {
-    const best   = 'NOTE: Review your project\'s actual status-columns & update config file manually';
-    md.push(`| \`${key}\` | \`${configValue}\` | ${best} |`);
+    const best   = `_NOTE: Review your project's actual status-&#8209;columns<br>and **manually** update the config.yml file_`;
+    md.push(`| ${key} | ${configValue} | ${best} |`);
   });
   md.push('');
 }
