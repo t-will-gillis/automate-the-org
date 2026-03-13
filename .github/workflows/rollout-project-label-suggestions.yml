@@ -2,24 +2,19 @@ name: Rollout Project Label Suggestions
 
 on:
   workflow_call:
-  workflow_dispatch: 
     inputs:
       target_repo:
         required: true
-        default: 't-will-gillis/website'
+        type: string
       source_repo:
         required: true
-        default: 't-will-gillis/automate-the-org'
+        type: string
       template_file:
         required: true
-        default: 'Add Update Label Weekly'
+        type: string
       rollout_branch:
-        required: false
-        default: 'automation/rollout-central-workflow'
-      github_app_name:
-        description: 'GitHub App name/slug:'
         required: true
-        default: 'hfla-workflow-rollout'
+        type: string
 
 jobs:
   Rollout-Label-Directory:
@@ -211,63 +206,62 @@ jobs:
           jq -c '[.[].name]' all_labels.json > repoLabels.json
 
           echo "Retrieved labels:"
-
           jq -r '.[] | @json' repoLabels.json
   
           echo "REPO_LABELS<<EOF" >> $GITHUB_ENV
           jq -c . repoLabels.json >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
                          
-      - name: Retrieve Project V2 status column names from destination repo
-        id: retrieve-project-status
-        env:
-          GITHUB_TOKEN: ${{ secrets.WORKFLOW_TEST }}
-        run: |
-          set -e
-          echo "Retrieving Project V2 status column names from '$TARGET_REPO'..."
+      # - name: Retrieve Project V2 status column names from destination repo
+      #   id: retrieve-project-status
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.WORKFLOW_TEST }}
+      #   run: |
+      #     set -e
+      #     echo "Retrieving Project V2 status column names from '$TARGET_REPO'..."
 
-          gh api graphql -f query='
-            query($owner: String!, $repo: String!) {
-              repository(owner: $owner, name: $repo) {
-                projectsV2(first: 1) {
-                  nodes {
-                    title
-                    fields(first: 20) {
-                      nodes {
-                        ... on ProjectV2SingleSelectField {
-                          name
-                          options {
-                            name
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          ' -f owner="$TARGET_ORG" -f repo="$PROJECT_NAME" > project_fields.json
+      #     gh api graphql -f query='
+      #       query($owner: String!, $repo: String!) {
+      #         repository(owner: $owner, name: $repo) {
+      #           projectsV2(first: 1) {
+      #             nodes {
+      #               title
+      #               fields(first: 20) {
+      #                 nodes {
+      #                   ... on ProjectV2SingleSelectField {
+      #                     name
+      #                     options {
+      #                       name
+      #                     }
+      #                   }
+      #                 }
+      #               }
+      #             }
+      #           }
+      #         }
+      #       }
+      #     ' -f owner="$TARGET_ORG" -f repo="$PROJECT_NAME" > project_fields.json
           
-          # Fail fast if GraphQL returned errors
-          if jq -e '.errors' project_fields.json > /dev/null 2>&1; then
-            echo "::error title=GraphQL error::Project V2 query returned errors"
-            jq '.errors' project_fields.json
-            exit 1
-          fi
+      #     # Fail fast if GraphQL returned errors
+      #     if jq -e '.errors' project_fields.json > /dev/null 2>&1; then
+      #       echo "::error title=GraphQL error::Project V2 query returned errors"
+      #       jq '.errors' project_fields.json
+      #       exit 1
+      #     fi
 
-          # Extract all option names from fields named "Status" across all projects, compacted
-          PROJ_STATUS_COLS=$(jq -c '[
-            .data.repository.projectsV2.nodes[].fields.nodes[]
-            | select(.name == "Status")
-            | .options[].name
-          ] | unique' project_fields.json)
+      #     # Extract all option names from fields named "Status" across all projects, compacted
+      #     PROJ_STATUS_COLS=$(jq -c '[
+      #       .data.repository.projectsV2.nodes[].fields.nodes[]
+      #       | select(.name == "Status")
+      #       | .options[].name
+      #     ] | unique' project_fields.json)
 
-          echo "Retrieved status columns:"
-          echo "$PROJ_STATUS_COLS" | jq -r '.[] | @json'
+      #     echo "Retrieved status columns:"
+      #     echo "$PROJ_STATUS_COLS" | jq -r '.[] | @json'
           
-          echo "PROJ_STATUS_COLS<<EOF" >> $GITHUB_ENV
-          echo "$PROJ_STATUS_COLS" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+      #     echo "PROJ_STATUS_COLS<<EOF" >> $GITHUB_ENV
+      #     echo "$PROJ_STATUS_COLS" >> $GITHUB_ENV
+      #     echo "EOF" >> $GITHUB_ENV
 
       - name: Switch to rollout branch in destination repo
         id: switch-branch
