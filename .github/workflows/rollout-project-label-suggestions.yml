@@ -209,7 +209,31 @@ jobs:
           cat repoLabels.json
 
           echo "REPO_LABELS=$(jq -c . repoLabels.json)" >> $GITHUB_ENV
-
+          
+      - name: Debug - Query user-level projects
+        env:
+          GITHUB_TOKEN: ${{ steps.generate-app-token.outputs.token }}
+        run: |
+          gh api graphql -f query='
+            query($login: String!) {
+              user(login: $login) {
+                projectsV2(first: 20) {
+                  nodes {
+                    title
+                    fields(first: 20) {
+                      nodes {
+                        ... on ProjectV2SingleSelectField {
+                          name
+                          options { name }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ' -f login="$TARGET_ORG" | jq .
+              
       - name: Retrieve Project V2 status column names from destination repo
         id: retrieve-project-status
         env:
@@ -219,36 +243,17 @@ jobs:
           echo "Retrieving Project V2 status column names from '$TARGET_REPO'..."
 
           gh api graphql -f query='
-            query($owner: String!) {
-              repositoryOwner(login: $owner) {
-                ... on User {
-                  projectsV2(first: 20) {
-                    nodes {
-                      title
-                      fields(first: 20) {
-                        nodes {
-                          ... on ProjectV2SingleSelectField {
+            query($owner: String!, $repo: String!) {
+              repository(owner: $owner, name: $repo) {
+                projectsV2(first: 20) {
+                  nodes {
+                    title
+                    fields(first: 20) {
+                      nodes {
+                        ... on ProjectV2SingleSelectField {
+                          name
+                          options {
                             name
-                            options {
-                              name
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-                ... on Organization {
-                  projectsV2(first: 20) {
-                    nodes {
-                      title
-                      fields(first: 20) {
-                        nodes {
-                          ... on ProjectV2SingleSelectField {
-                            name
-                            options {
-                              name
-                            }
                           }
                         }
                       }
@@ -257,7 +262,10 @@ jobs:
                 }
               }
             }
-          ' -f owner="$TARGET_ORG" > project_fields.json
+          ' -f owner="$TARGET_ORG" -f repo="$PROJECT_NAME" > project_fields.json
+          
+          echo "=== RAW PROJECT FIELDS ==="
+          cat project_fields.json | jq .
 
           # Fail fast if GraphQL returned errors
           if jq -e '.errors' project_fields.json > /dev/null 2>&1; then
@@ -268,9 +276,9 @@ jobs:
 
           # Extract all option names from fields named "Status" across all projects, compacted
           PROJ_STATUS_COLS=$(jq -c '[
-            .data.repositoryOwner.projectsV2.nodes[]?.fields.nodes[]?
+            .data.repository.projectsV2.nodes[].fields.nodes[]
             | select(.name == "Status")
-            | .options[]?.name
+            | .options[].name
           ] | unique' project_fields.json)
 
           echo "Retrieved status columns:"
