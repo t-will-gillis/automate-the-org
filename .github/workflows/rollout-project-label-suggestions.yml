@@ -210,6 +210,19 @@ jobs:
 
           echo "REPO_LABELS=$(jq -c . repoLabels.json)" >> $GITHUB_ENV
           
+      - name: Debug - REST API projects check
+        env:
+          GITHUB_TOKEN: ${{ steps.generate-app-token.outputs.token }}
+        run: |
+          echo "=== Checking token scopes ==="
+          gh api /user | jq .login
+
+          echo "=== Checking user projects via REST ==="
+          gh api /users/$TARGET_ORG/projects?per_page=20 | jq .
+
+          echo "=== Checking repo-linked projects via REST ==="
+          gh api /repos/$TARGET_ORG/$PROJECT_NAME/projects?per_page=20 | jq .
+          
       - name: Debug - Query user-level projects
         env:
           GITHUB_TOKEN: ${{ steps.generate-app-token.outputs.token }}
