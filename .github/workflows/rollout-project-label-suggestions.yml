@@ -206,51 +206,16 @@ jobs:
           jq -c '[.[].name]' all_labels.json > repoLabels.json
 
           echo "Retrieved labels:"
-          cat repoLabels.json
+          jq -r '.[] | tostring' repoLabels.json
 
-          echo "REPO_LABELS=$(jq -c . repoLabels.json)" >> $GITHUB_ENV
-          
-      - name: Debug - REST API projects check
-        env:
-          GITHUB_TOKEN: ${{ steps.generate-app-token.outputs.token }}
-        run: |
-          echo "=== Checking token scopes ==="
-          gh api /user | jq .login
-
-          echo "=== Checking user projects via REST ==="
-          gh api /users/$TARGET_ORG/projects?per_page=20 | jq .
-
-          echo "=== Checking repo-linked projects via REST ==="
-          gh api /repos/$TARGET_ORG/$PROJECT_NAME/projects?per_page=20 | jq .
-          
-      - name: Debug - Query user-level projects
-        env:
-          GITHUB_TOKEN: ${{ steps.generate-app-token.outputs.token }}
-        run: |
-          gh api graphql -f query='
-            query($login: String!) {
-              user(login: $login) {
-                projectsV2(first: 20) {
-                  nodes {
-                    title
-                    fields(first: 20) {
-                      nodes {
-                        ... on ProjectV2SingleSelectField {
-                          name
-                          options { name }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          ' -f login="$TARGET_ORG" | jq .
-              
+          echo "REPO_LABELS<<EOF" >> $GITHUB_ENV
+          jq -c . repoLabels.json >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+                         
       - name: Retrieve Project V2 status column names from destination repo
         id: retrieve-project-status
         env:
-          GITHUB_TOKEN: ${{ steps.generate-app-token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.WORKFLOW_TEST }}
         run: |
           set -e
           echo "Retrieving Project V2 status column names from '$TARGET_REPO'..."
