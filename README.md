@@ -13,21 +13,6 @@ To install a centralized GitHub Actions (GHA) to a project repo, follow these st
   - For both, first scroll to "Repository access", then "Only select repositories", then select the corresponding project repo in the "Select repositories" dropdown.  
   - Click "Save".
 
-- (Recommended) Run the **Rollout Project Label Suggestions** workflow.
-  <details>  
-  &emsp;  
-
-  1. From the "Automate the ORG" repo, select "Actions", then select "Rollout Project Label Suggestions" on the left.  
-  2. On the right, click on "Run workflow" to bring up installation options.  
-  3. Confirm that the `master` branch is selected.  
-  4. Enter the `<project-repo>` for the "Destination repo".  
-  5. Do not change the "Source repo".
-  6. Do not change the "Branch name" or "GitHub App" name. 
-  7. Keep box checked for "Dry run mode". 
-  8. Click "Run workflow". If successful, the "DRY-RUN" output will be found in "Rollout to destination repo".
-  9. Review the Dry-Run results. If these are what you were expecting, run again with "Dry run mode" unchecked.
-  </details>  
-  &emsp;
 
 - Run the **"Rollout Workflow to Project"** workflow from "Automate the ORG". 
   <details>  
