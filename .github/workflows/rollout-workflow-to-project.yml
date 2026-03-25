@@ -35,9 +35,6 @@ on:
 permissions:
   contents: read
 
-permissions:
-  contents: read
-
 jobs:
   Rollout-Workflow:
     runs-on: ubuntu-latest
