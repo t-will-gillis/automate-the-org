@@ -7,9 +7,10 @@ Centralized GitHub Actions for repository maintenance and automation across the 
 ### Installing an Action to a Project
 To install a centralized GitHub Actions (GHA) to a project repo, follow these steps:  
 
-- Configure both of the organizational GitHub Apps for authentication:  
-  - [hfla-workflow-rollout](https://github.com/organizations/hackforla/settings/installations/92646041) gives "Automate the ORG" (source) access to the project (destination) repo during installation.  
-  - [hfla-graphql-app](https://github.com/organizations/hackforla/settings/installations/92507394) gives the project (destination) repo access to scripts in "Automate the ORG" (source) during the workflow's runtime.  
+- Configure the **GitHub Apps**
+  - Make sure that the project name ( e.g. `org/project-repo`) is selected on the two organizational GitHub Apps- these are used for authentication:  
+    - [hfla-workflow-rollout](https://github.com/organizations/hackforla/settings/installations/92646041) gives "Automate the ORG" (source) access to the project (destination) repo during installation.  
+    - [hfla-graphql-app](https://github.com/organizations/hackforla/settings/installations/92507394) gives the project (destination) repo access to scripts in "Automate the ORG" (source) during the workflow's runtime.  
   - For both, first scroll to "Repository access", then "Only select repositories", then select the corresponding project repo in the "Select repositories" dropdown.  
   - Click "Save".
 
@@ -20,13 +21,17 @@ To install a centralized GitHub Actions (GHA) to a project repo, follow these st
   1. From the "Automate the ORG" repo, select "Actions", then select "Rollout Workflow to Project" on the left.  
   2. On the right, click on "Run workflow" to bring up installation options.  
   3. Confirm that the `main` branch is selected.  
-  4. Enter the `<project-repo>` for the "Destination repo".  
+  4. Enter the `project-repo` for the "Destination repo".  
   5. Do not change the "Source repo".
-  6. Select which GitHub Action you would like installed
+  6. Select which GitHub Action you would like installed.
   7. Do not change the "Branch name" or "GitHub App" name. 
-  8. Keep box checked for "Dry run mode". 
-  9. Click "Run workflow". If successful, the "DRY-RUN" output will be found in "Rollout to destination repo".
-  10. Review the Dry-Run results. If these are what you were expecting, run again with "Dry run mode" unchecked.
+  8. To rollout the workflow, make sure that "Dry-run mode" is not checked, then click "Run workflow". The automation will generate the installation PR in the destination repo.
+  9. OPTIONAL: Only if you would like to check whether the automation will generate the expected values, check the box for "Dry-run mode" and click "Run workflow".  
+&emsp;a. Successful runs (without errors) will be shown with green checks.  
+&emsp;b. When the workflow completes, click on the most recent "Rollout Workflow to Project", then on the next screen click on "Rollout-Workflow". Scroll down and open "Rollout to destination repo" for the dry-run report to see if this is what you expect.
+&emsp;c. Next you can click on "Label-Suggestions/Rollout-Label-Directory", then scroll down to "Preview PR comment". This will show the text for the supplemental comment on the PR.
+
+ 
   </details>  
   &emsp;  
 
