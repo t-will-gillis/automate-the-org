@@ -16,6 +16,18 @@
 
 
 # ==============================================================================
+# Opt-in for future features
+# ==============================================================================
+#
+# If you would like to opt-in for future features when and if they are added to
+# this workflow, uncomment this field and enter 'true'. If you do not, enter 
+# 'false' and/or keep this variable commented out.
+
+# optInFutureFeatures: true
+
+
+
+# ==============================================================================
 # Labels and label placeholders used by this workflow
 # ==============================================================================
 #
