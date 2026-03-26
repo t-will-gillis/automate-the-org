@@ -11,19 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 _No unreleased changes yet._
 
 ## v1.2.0
-2026-03-25
+2026-03-25  
+
 Security:
 - fix: Replaced Python string interpolation with sys.argv[1] to prevent script injection
 - fix: Changed sed delimiter to | to safely handle slashes in repo names
 - fix: Added force-push guard to prevent rollout branch overwriting default branch
 - fix: Added permissions: contents: read at workflow level to both rollout workflows
 - fix: Added set -e / set -eo pipefail to all eligible run: blocks
-- fix: Switched rollout-project-label-suggestions.yml to HFLA_WORKFLOW_APP; reduced token permissions to minimum required
-Workflows:
+- fix: Switched rollout-project-label-suggestions.yml to HFLA_WORKFLOW_APP; reduced token permissions to minimum required  
+
+Workflows:  
 - chore: Renamed auto-update-master.sh → auto-update-main.sh; fixed major version tag force-push
 - chore: Renamed default branch master → main
-- refactor: Updated workflow placeholder from <repo-name> to <ORG_NAME>/<REPO_NAME>
-Label & Project Board suggestions:
+- refactor: Updated workflow placeholder from <repo-name> to <ORG_NAME>/<REPO_NAME>  
+
+Label & Project Board suggestions:  
 - feat: Added ProjectV2 status column retrieval via GraphQL using shortDescription to identify the correct board
 - fix: Status columns table now shows actual matched suggestions instead of hardcoded note
 - feat: Added "Unable to identify Project Board" fallback when board cannot be matched
